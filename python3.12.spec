@@ -360,6 +360,12 @@ Patch371: 00371-revert-bpo-1596321-fix-threading-_shutdown-for-the-main-thread-g
 # Fixes https://github.com/python/cpython/issues/98707
 Patch389: 00389-don-t-let---with-system-libmpdec---with-system-expat-use-the-vendored-headers.patch
 
+# 00390 # 1b549f4b0f00f9b782f254eca0d4dee9cd764085
+# gh-98776: Fix make regen-test-levenshtein for out-of-tree builds
+#
+# Fixes https://github.com/python/cpython/issues/98776
+Patch390: 00390-gh-98776-fix-make-regen-test-levenshtein-for-out-of-tree-builds.patch
+
 # (New patches go here ^^^)
 #
 # When adding new patches to "python" and "python3" in Fedora, EL, etc.,
@@ -827,6 +833,12 @@ topdir=$(pwd)
 DirHoldingGdbPy=%{_usr}/lib/debug/%{_libdir}
 mkdir -p %{buildroot}$DirHoldingGdbPy
 %endif # with gdb_hooks
+
+# When the actual %%{dynload_dir} exists (it does when python3.X is installed for regen-all)
+# %%{buildroot}%%{dynload_dir} is not created by make install and the extension modules are missing
+# Reported upstream as https://github.com/python/cpython/issues/98782
+# A workaround is to create the directory before running make install
+mkdir -p %{buildroot}%{dynload_dir}
 
 # Multilib support for pyconfig.h
 # 32- and 64-bit versions of pyconfig.h are different. For multilib support
