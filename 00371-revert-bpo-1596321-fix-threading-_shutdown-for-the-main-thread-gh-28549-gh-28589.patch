@@ -1,6 +1,6 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Hrn=C4=8Diar?= <thrnciar@redhat.com>
-Date: Tue, 7 Dec 2021 14:41:59 +0100
+Date: Tue, 25 Oct 2022 12:02:33 +0200
 Subject: [PATCH] 00371: Revert "bpo-1596321: Fix threading._shutdown() for the
  main thread (GH-28549) (GH-28589)"
 
@@ -16,12 +16,12 @@ https://github.com/GrahamDumpleton/mod_wsgi/issues/730
  2 files changed, 8 insertions(+), 50 deletions(-)
 
 diff --git a/Lib/test/test_threading.py b/Lib/test/test_threading.py
-index 9c6561c099..84714c03fe 100644
+index c664996233..0877b4f227 100644
 --- a/Lib/test/test_threading.py
 +++ b/Lib/test/test_threading.py
-@@ -956,39 +956,6 @@ def test_debug_deprecation(self):
-                b'is deprecated and will be removed in Python 3.12')
-         self.assertIn(msg, err)
+@@ -1002,39 +1002,6 @@ def noop(): pass
+             threading.Thread(target=noop).start()
+             # Thread.join() is not called
  
 -    def test_import_from_another_thread(self):
 -        # bpo-1596321: If the threading module is first import from a thread
@@ -60,10 +60,10 @@ index 9c6561c099..84714c03fe 100644
  class ThreadJoinOnShutdown(BaseTestCase):
  
 diff --git a/Lib/threading.py b/Lib/threading.py
-index 4f72938551..18c10e6489 100644
+index d030e12436..16ab0aceba 100644
 --- a/Lib/threading.py
 +++ b/Lib/threading.py
-@@ -1546,29 +1546,20 @@ def _shutdown():
+@@ -1557,29 +1557,20 @@ def _shutdown():
  
      global _SHUTTING_DOWN
      _SHUTTING_DOWN = True

@@ -2,10 +2,10 @@
 # Top-level metadata
 # ==================
 
-%global pybasever 3.11
+%global pybasever 3.12
 
 # pybasever without the dot:
-%global pyshortver 311
+%global pyshortver 312
 
 Name: python%{pybasever}
 Summary: Version %{pybasever} of the Python interpreter
@@ -14,7 +14,7 @@ URL: https://www.python.org/
 #  WARNING  When rebasing to a new Python version,
 #           remember to update the python3-docs package as well
 %global general_version %{pybasever}.0
-#global prerel ...
+%global prerel a1
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
 Release: 1%{?dist}
@@ -59,7 +59,7 @@ License: Python-2.0.1
 #   IMPORTANT: When bootstrapping, it's very likely the wheels for pip and
 #   setuptools are not available. Turn off the rpmwheels bcond until
 #   the two packages are built with wheels to get around the issue.
-%bcond_with bootstrap
+%bcond_without bootstrap
 
 # Whether to use RPM build wheels from the python-{pip,setuptools}-wheel package
 # Uses upstream bundled prebuilt wheels otherwise
@@ -212,6 +212,7 @@ BuildRequires: ncurses-devel
 
 BuildRequires: openssl-devel
 BuildRequires: pkgconfig
+BuildRequires: python-rpm-macros
 BuildRequires: readline-devel
 BuildRequires: redhat-rpm-config >= 127
 BuildRequires: sqlite-devel
@@ -256,8 +257,8 @@ BuildRequires: python3-rpm-generators
 
 Source0: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz
 Source1: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz.asc
-# The release manager for Python 3.11 is pablogsal
-Source2: https://keybase.io/pablogsal/pgp_keys.asc
+# The release manager for Python 3.12 is Thomas Wouters
+Source2: https://github.com/Yhg1s.gpg
 
 # A simple script to check timestamps of bytecode files
 # Run in check section with Python that is currently being built
@@ -312,7 +313,7 @@ Patch251: 00251-change-user-install-location.patch
 # Ideally, we should talk to upstream and explain why we don't want this
 Patch328: 00328-pyc-timestamp-invalidation-mode.patch
 
-# 00371 # c1754d9c2750f89cb702e1b63a99201f5f7cff00
+# 00371 # 1fc313929648e9b543542de09f59c55e175ac45a
 # Revert "bpo-1596321: Fix threading._shutdown() for the main thread (GH-28549) (GH-28589)"
 #
 # This reverts commit 38c67738c64304928c68d5c2bd78bbb01d979b94. It
@@ -322,6 +323,31 @@ Patch328: 00328-pyc-timestamp-invalidation-mode.patch
 # https://bodhi.fedoraproject.org/updates/FEDORA-2021-e152ce5f31
 # https://github.com/GrahamDumpleton/mod_wsgi/issues/730
 Patch371: 00371-revert-bpo-1596321-fix-threading-_shutdown-for-the-main-thread-gh-28549-gh-28589.patch
+
+# 00389 # eec8cefdbbc164dc19d7112d1c65dbf6406ecca3
+# Don't let --with-system-libmpdec / --with-system-expat use the vendored headers
+#
+# This was a regression in Python 3.12.0a2 that prevented Fedora doing
+# this:
+#
+#     $ rm -r Modules/_decimal/libmpdec
+#     $ rm -r Modules/expat
+#
+# Before building Python with --with-system-libmpdec --with-system-expat.
+#
+# The errors were:
+#
+#     make: *** No rule to make target
+# 'Modules/_decimal/libmpdec/basearith.h', needed by
+# 'Modules/_decimal/_decimal.o'.  Stop.
+#     make: *** No rule to make target 'Modules/expat/ascii.h', needed by
+# 'Modules/pyexpat.o'.  Stop.
+#
+# Now the make-dependency on the headers only exists
+# when --with-system-libmpdec / --with-system-expat is **not** used.
+#
+# Fixes https://github.com/python/cpython/issues/98707
+Patch389: 00389-don-t-let---with-system-libmpdec---with-system-expat-use-the-vendored-headers.patch
 
 # (New patches go here ^^^)
 #
@@ -902,10 +928,6 @@ sed -i -e "s/'pyconfig.h'/'%{_pyconfig_h}'/" \
   %{buildroot}%{pylibdir}/distutils/sysconfig.py \
   %{buildroot}%{pylibdir}/sysconfig.py
 
-# Install pathfix.py to bindir
-# See https://github.com/fedora-python/python-rpm-porting/issues/24
-cp -p Tools/scripts/pathfix.py %{buildroot}%{_bindir}/pathfix%{pybasever}.py
-
 # Install i18n tools to bindir
 # They are also in python2, so we version them
 # https://bugzilla.redhat.com/show_bug.cgi?id=1571474
@@ -918,7 +940,7 @@ done
 # This currently only covers files matching ^[a-zA-Z0-9_]+\.py$,
 # so handle files named using other naming scheme separately.
 LD_LIBRARY_PATH=./build/optimized ./build/optimized/python \
-  Tools/scripts/pathfix.py \
+  %{_rpmconfigdir}/redhat/pathfix.py \
   -i "%{_bindir}/python%{pybasever}" -pn \
   %{buildroot} \
   %{buildroot}%{_bindir}/*%{pybasever}.py \
@@ -958,7 +980,7 @@ LD_LIBRARY_PATH="%{buildroot}%{dynload_dir}/:%{buildroot}%{_libdir}" \
 # Turn this BRP off, it is done by compileall2 --hardlink-dupes above
 %global __brp_python_hardlink %{nil}
 
-# Since we have pathfix.py in bindir, this is created, but we don't want it
+# Since we have *.py files in bindir, this is created, but we don't want it
 rm -rf %{buildroot}%{_bindir}/__pycache__
 
 # Fixup permissions for shared libraries from non-standard 555 to standard 755:
@@ -997,7 +1019,6 @@ ln -s ./idle3 %{buildroot}%{_bindir}/idle
 ln -s ./python3-config %{buildroot}%{_bindir}/python-config
 ln -s ./python3.1 %{buildroot}%{_mandir}/man1/python.1
 ln -s ./python3.pc %{buildroot}%{_libdir}/pkgconfig/python.pc
-ln -s ./pathfix%{pybasever}.py %{buildroot}%{_bindir}/pathfix.py
 %if %{with debug_build}
 ln -s ./python3-debug %{buildroot}%{_bindir}/python-debug
 %endif
@@ -1128,7 +1149,6 @@ CheckPython optimized
 %license %{pylibdir}/LICENSE.txt
 
 %{pylibdir}/lib2to3
-%exclude %{pylibdir}/lib2to3/tests
 
 %dir %{pylibdir}/unittest/
 %dir %{pylibdir}/unittest/__pycache__/
@@ -1244,6 +1264,7 @@ CheckPython optimized
 %{dynload_dir}/xxlimited.%{SOABI_optimized}.so
 %{dynload_dir}/xxlimited_35.%{SOABI_optimized}.so
 %{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
+%{dynload_dir}/xxsubtype.%{SOABI_optimized}.so
 %{dynload_dir}/zlib.%{SOABI_optimized}.so
 %{dynload_dir}/_zoneinfo.%{SOABI_optimized}.so
 
@@ -1380,7 +1401,6 @@ CheckPython optimized
 %{_libdir}/pkgconfig/python3.pc
 %{_libdir}/pkgconfig/python.pc
 %{_libdir}/pkgconfig/python3-embed.pc
-%{_bindir}/pathfix.py
 %{_bindir}/pygettext3.py
 %{_bindir}/pygettext.py
 %{_bindir}/msgfmt3.py
@@ -1388,7 +1408,6 @@ CheckPython optimized
 %endif
 
 %{_bindir}/2to3-%{pybasever}
-%{_bindir}/pathfix%{pybasever}.py
 %{_bindir}/pygettext%{pybasever}.py
 %{_bindir}/msgfmt%{pybasever}.py
 
@@ -1419,7 +1438,6 @@ CheckPython optimized
 
 %files -n %{pkgname}-tkinter
 %{pylibdir}/tkinter
-%exclude %{pylibdir}/tkinter/test
 %{dynload_dir}/_tkinter.%{SOABI_optimized}.so
 %{pylibdir}/turtle.py
 %{pylibdir}/__pycache__/turtle*%{bytecode_suffixes}
@@ -1431,7 +1449,6 @@ CheckPython optimized
 
 
 %files -n %{pkgname}-test
-%{pylibdir}/ctypes/test
 %{pylibdir}/distutils/tests
 %{pylibdir}/test
 %{dynload_dir}/_ctypes_test.%{SOABI_optimized}.so
@@ -1441,9 +1458,6 @@ CheckPython optimized
 %{dynload_dir}/_testinternalcapi.%{SOABI_optimized}.so
 %{dynload_dir}/_testmultiphase.%{SOABI_optimized}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_optimized}.so
-%{pylibdir}/lib2to3/tests
-%{pylibdir}/tkinter/test
-%{pylibdir}/unittest/test
 
 # We don't bother splitting the debug build out into further subpackages:
 # if you need it, you're probably a developer.
@@ -1534,6 +1548,7 @@ CheckPython optimized
 %{dynload_dir}/xxlimited.%{SOABI_debug}.so
 %{dynload_dir}/xxlimited_35.%{SOABI_debug}.so
 %{dynload_dir}/_xxsubinterpreters.%{SOABI_debug}.so
+%{dynload_dir}/xxsubtype.%{SOABI_debug}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_debug}.so
 %{dynload_dir}/zlib.%{SOABI_debug}.so
 %{dynload_dir}/_zoneinfo.%{SOABI_debug}.so
@@ -1595,106 +1610,5 @@ CheckPython optimized
 # ======================================================
 
 %changelog
-* Mon Oct 24 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0-1
-- Update to 3.11.0
-
-* Tue Sep 13 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~rc2-1
-- Update to 3.11.0rc2
-
-* Tue Aug 09 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~rc1-2
-- Don't use custom installation schemes
-- Fixes rhbz#2026979
-- Fixes rhbz#2097183
-
-* Mon Aug 08 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~rc1-1
-- Update to 3.11.0rc1
-
-* Tue Jul 26 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b5-1
-- Update to 3.11.0b5
-
-* Fri Jul 22 2022 Fedora Release Engineering <releng@fedoraproject.org> - 3.11.0~b4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild
-
-* Mon Jul 11 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b4-1
-- Update to 3.11.0b4
-
-* Fri Jul 08 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b3-8
-- Finish bootstrap of the re module speed regression fix
-
-* Fri Jul 08 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b3-7
-- Fix speed regression in the re module which prevented chromium from building
-
-* Fri Jun 24 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b3-6
-- Clear and reset sqlite3 statements properly in cursor iternext (fixes rhbz#2099049)
-- Revert a problematic fix of threading._shutdown() again (fixes rhbz#2100282)
-
-* Tue Jun 21 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b3-5
-- Build Python with the optimized Blake2 library libb2
-
-* Tue Jun 21 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b3-4
-- Make C++ version of _Py_CAST work with 0/NULL
-
-* Mon Jun 13 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b3-3
-- Finish bootstrapping for Python 3.11 mass rebuild
-
-* Mon Jun 13 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b3-2
-- Initial bootstrap for Python 3.11 mass rebuild
-
-* Wed Jun 01 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b3-1
-- Update to 3.11.0b3
-
-* Tue May 31 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~b2-1
-- Update to 3.11.0b2
-
-* Tue May 10 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b1-2
-- Finish bootstrapping 3.11.0b1
-
-* Sun May 08 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~b1-1
-- Update to 3.11.0b1
-
-* Wed Apr 20 2022 Tomas Orsava <torsava@redhat.com> - 3.11.0~a7-3
-- Build Python 3.11 with subpackages
-- `python(abi)` is still not Provided for alternative Python versions
-- Drop old no-longer-needed Obsoletes of python311 and python3-tools
-- Move _sysconfigdata_d_linux*.py to the debug subpackage
-- Resolves: rhbz#2063227
-
-* Thu Apr 07 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a7-2
-- Finish bootstrapping 3.11.0a7
-
-* Wed Apr 06 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a7-1
-- Update to 3.11.0a7
-
-* Tue Mar 08 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~a6-2
-- Finish bootstrapping 3.11.0a6
-
-* Mon Mar 07 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~a6-1
-- Update to 3.11.0a6
-
-* Fri Feb 04 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a5-1
-- Update to 3.11.0a5
-
-* Fri Jan 21 2022 Fedora Release Engineering <releng@fedoraproject.org> - 3.11.0~a4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
-
-* Mon Jan 17 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a4-1
-- Update to 3.11.0a4
-
-* Sat Jan 08 2022 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~a3-3
-- Rebuilt for https://fedoraproject.org/wiki/Changes/LIBFFI34
-
-* Mon Dec 13 2021 Miro Hrončok <mhroncok@redhat.com> - 3.11.0~a3-2
-- Supplement tox
-
-* Fri Dec 10 2021 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a3-1
-- Update to 3.11.0a3
-
-* Mon Nov 15 2021 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a2-1
-- Update to 3.11.0a2
-- Patch 251 was updated to include specific install scheme for virtualenv
-
-* Fri Nov 12 2021 Björn Esser <besser82@fedoraproject.org> - 3.11.0~a1-2
-- Rebuild(libnsl2)
-
-* Wed Oct 06 2021 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.11.0~a1-1
-- Initial Python 3.11 package forked from Python 3.10
+* Wed Oct 26 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a1-1
+- Initial Python 3.12 package forked from Python 3.11
