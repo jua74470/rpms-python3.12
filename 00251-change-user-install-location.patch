@@ -10,10 +10,6 @@ Set values of base and platbase in sysconfig from /usr
 to /usr/local when RPM build is not detected
 to make pip and similar tools install into separate location.
 
-Set values of prefix and exec_prefix in distutils install command
-to /usr/local if executable is /usr/bin/python* and RPM build
-is not detected to make distutils and pypa/distutils install into separate location.
-
 Fedora Change: https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
 Downstream only.
 
@@ -28,38 +24,11 @@ Co-authored-by: Miro Hrončok <miro@hroncok.cz>
 Co-authored-by: Michal Cyprian <m.cyprian@gmail.com>
 Co-authored-by: Lumír Balhar <frenzy.madness@gmail.com>
 ---
- Lib/distutils/command/install.py |  8 ++++--
- Lib/site.py                      |  9 +++++-
- Lib/sysconfig.py                 | 49 +++++++++++++++++++++++++++++++-
- Lib/test/test_sysconfig.py       | 17 +++++++++--
- 4 files changed, 77 insertions(+), 6 deletions(-)
+ Lib/site.py                |  9 ++++++-
+ Lib/sysconfig.py           | 49 +++++++++++++++++++++++++++++++++++++-
+ Lib/test/test_sysconfig.py | 17 +++++++++++--
+ 3 files changed, 71 insertions(+), 4 deletions(-)
 
-diff --git a/Lib/distutils/command/install.py b/Lib/distutils/command/install.py
-index a22a5d094d..804505d861 100644
---- a/Lib/distutils/command/install.py
-+++ b/Lib/distutils/command/install.py
-@@ -159,6 +159,8 @@ class install(Command):
- 
-     negative_opt = {'no-compile' : 'compile'}
- 
-+    # Allow Fedora to add components to the prefix
-+    _prefix_addition = getattr(sysconfig, '_prefix_addition', '')
- 
-     def initialize_options(self):
-         """Initializes options."""
-@@ -441,8 +443,10 @@ def finalize_unix(self):
-                     raise DistutilsOptionError(
-                           "must not supply exec-prefix without prefix")
- 
--                self.prefix = os.path.normpath(sys.prefix)
--                self.exec_prefix = os.path.normpath(sys.exec_prefix)
-+                self.prefix = (
-+                    os.path.normpath(sys.prefix) + self._prefix_addition)
-+                self.exec_prefix = (
-+                    os.path.normpath(sys.exec_prefix) + self._prefix_addition)
- 
-             else:
-                 if self.exec_prefix is None:
 diff --git a/Lib/site.py b/Lib/site.py
 index 69670d9d7f..104cb93899 100644
 --- a/Lib/site.py
@@ -82,10 +51,10 @@ index 69670d9d7f..104cb93899 100644
          if os.path.isdir(sitedir):
              addsitedir(sitedir, known_paths)
 diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
-index ebe3711827..55af57b335 100644
+index 73c25684db..d43ce7f1a2 100644
 --- a/Lib/sysconfig.py
 +++ b/Lib/sysconfig.py
-@@ -103,6 +103,11 @@
+@@ -104,6 +104,11 @@
  else:
      _INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_venv']
  
@@ -97,7 +66,7 @@ index ebe3711827..55af57b335 100644
  
  # NOTE: site.py has copy of this function.
  # Sync it when modify this function.
-@@ -162,6 +167,19 @@ def joinuser(*args):
+@@ -163,6 +168,19 @@ def joinuser(*args):
              },
      }
  
@@ -117,7 +86,7 @@ index ebe3711827..55af57b335 100644
  _SCHEME_KEYS = ('stdlib', 'platstdlib', 'purelib', 'platlib', 'include',
                  'scripts', 'data')
  
-@@ -258,11 +276,40 @@ def _extend_dict(target_dict, other_dict):
+@@ -263,11 +281,40 @@ def _extend_dict(target_dict, other_dict):
          target_dict[key] = value
  
  
