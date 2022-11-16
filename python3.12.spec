@@ -247,8 +247,10 @@ BuildRequires: /usr/bin/dtrace
 BuildRequires: /usr/sbin/ifconfig
 
 %if %{with rpmwheels}
-BuildRequires: %{python_wheel_pkg_prefix}-setuptools-wheel
-BuildRequires: %{python_wheel_pkg_prefix}-pip-wheel
+# Newer versions in Fedora 37 support Python 3.12
+# Versions in Fedora 36 were patched to add the support, in the versions listed bellow
+BuildRequires: %{python_wheel_pkg_prefix}-setuptools-wheel >= 59.6.0-3
+BuildRequires: %{python_wheel_pkg_prefix}-pip-wheel >= 21.3.1-4
 %endif
 
 %if %{without bootstrap}
@@ -446,8 +448,8 @@ This package contains /usr/bin/python - the "python" command that runs Python 3.
 Summary:        Python runtime libraries
 
 %if %{with rpmwheels}
-Requires: %{python_wheel_pkg_prefix}-setuptools-wheel
-Requires: %{python_wheel_pkg_prefix}-pip-wheel
+Requires: %{python_wheel_pkg_prefix}-setuptools-wheel >= 59.6.0-3
+Requires: %{python_wheel_pkg_prefix}-pip-wheel >= 21.3.1-4
 %else
 Provides: bundled(python3dist(pip)) = %{pip_version}
 Provides: bundled(python3dist(setuptools)) = %{setuptools_version}
