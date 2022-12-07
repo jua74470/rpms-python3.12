@@ -51,7 +51,7 @@ index 69670d9d7f..104cb93899 100644
          if os.path.isdir(sitedir):
              addsitedir(sitedir, known_paths)
 diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
-index 73c25684db..d43ce7f1a2 100644
+index c61100a6da..30143e577e 100644
 --- a/Lib/sysconfig.py
 +++ b/Lib/sysconfig.py
 @@ -104,6 +104,11 @@
