@@ -19,11 +19,9 @@ not_compiled = [
     '*/test/bad_coding.py',
     '*/test/bad_coding2.py',
     '*/test/badsyntax_*.py',
-    '*/test_lib2to3/data/bom.py',
-    '*/test_lib2to3/data/crlf.py',
-    '*/test_lib2to3/data/different_encoding.py',
-    '*/test_lib2to3/data/false_encoding.py',
-    '*/test_lib2to3/data/py2_test_grammar.py',
+    '*/test_lib2to3/data/*.py',
+    '*/test_lib2to3/data/*/*.py',
+    '*/test_lib2to3/data/*/*/*.py',
     '*.debug-gdb.py',
 ]
 
