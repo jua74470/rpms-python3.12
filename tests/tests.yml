@@ -21,13 +21,13 @@
         run: rpm -qa
     - smoke:
         dir: python/smoke
-        run: "VERSION={{ pybasever }} ./venv.sh"
+        run: "VERSION={{ pybasever }} CYTHON=false ./venv.sh"
     - smoke_virtualenv:
         dir: python/smoke
-        run: "VERSION={{ pybasever }} METHOD=virtualenv ./venv.sh"
+        run: "VERSION={{ pybasever }} METHOD=virtualenv CYTHON=false ./venv.sh"
     - debugsmoke:
         dir: python/smoke
-        run: "PYTHON=python{{ pybasever }}d TOX=false VERSION={{ pybasever }} ./venv.sh"
+        run: "PYTHON=python{{ pybasever }}d TOX=false VERSION={{ pybasever }} CYTHON=false ./venv.sh"
     - selftest:
         dir: python/selftest
         run: "VERSION={{ pybasever }} X='' ./parallel.sh"
