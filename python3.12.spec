@@ -20,17 +20,6 @@ Version: %{general_version}%{?prerel:~%{prerel}}
 Release: 1%{?dist}
 License: Python-2.0.1
 
-# Getting this build in Koji on 32bit ARM is frustrating due to technical problems
-# https://pagure.io/releng/issue/11095
-# Fedora 37+ dropped that architecture
-# https://fedoraproject.org/wiki/Changes/RetireARMv7
-# Upstream does not support it anyway
-# https://peps.python.org/pep-0011/
-# Hence, we exclude it starting with Python 3.12
-# https://lists.fedoraproject.org/archives/list/python-devel@lists.fedoraproject.org/thread/4QWRWUYQOLCVC5D5YHXFXFOGPEIIPYSJ/
-# Once Fedora 36 goes EOL, this line can be dropped.
-ExcludeArch: %{arm}
-
 
 # ==================================
 # Conditionals controlling the build
