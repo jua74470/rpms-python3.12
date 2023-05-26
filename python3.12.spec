@@ -17,7 +17,7 @@ URL: https://www.python.org/
 %global prerel b1
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -60,13 +60,20 @@ License: Python-2.0.1
 #   python-pip is built with a wheel to get around the issue.
 %bcond_with bootstrap
 
-# Whether to use RPM build wheels from the python-pip-wheel package
+# Whether to use RPM build wheels from the python-{pip,setuptools,wheel}-wheel packages
 # Uses upstream bundled prebuilt wheels otherwise
+# Only F39+ has a pip new enough to work with Python 3.12
+%if 0%{?fedora} >= 39 || 0%{?rhel} >= 10
+%bcond_without rpmwheels
+%else
 %bcond_with rpmwheels
+%endif
 # If the rpmwheels condition is disabled, we use the bundled wheel packages
 # from Python with the versions below.
 # This needs to be manually updated when we update Python.
 %global pip_version 23.1.2
+%global setuptools_version 67.6.1
+%global wheel_version 0.40.0
 
 # Expensive optimizations (mainly, profile-guided optimizations)
 %bcond_without optimizations
@@ -238,6 +245,10 @@ BuildRequires: /usr/sbin/ifconfig
 # Python 3.12 removed the deprecated imp module,
 # the first compatible version of pip is 23.1.2.
 BuildRequires: %{python_wheel_pkg_prefix}-pip-wheel >= 23.1.2
+%if %{with tests}
+BuildRequires: %{python_wheel_pkg_prefix}-setuptools-wheel
+BuildRequires: %{python_wheel_pkg_prefix}-wheel-wheel
+%endif
 %endif
 
 %if %{without bootstrap}
@@ -303,6 +314,12 @@ Patch371: 00371-revert-bpo-1596321-fix-threading-_shutdown-for-the-main-thread-g
 # 00398 # 3a2e73c1542a7204628783cef2186e4b8a385f79
 # fix stack overwrite on 32-bit in perf map test harness (#104811)
 Patch398: 00398-fix-stack-overwrite-on-32-bit-in-perf-map-test-harness-gh-104811-104823.patch
+
+# 00401 # 48310af24b090719553bf0e9c965d80524e0b40e
+# Tests: Use setuptools+wheel from sysconfig.get_config_var('WHEEL_PKG_DIR') if set
+#
+# Proposed upstream https://github.com/python/cpython/pull/105056
+Patch401: 00401-tests-use-setuptools-wheel-from-sysconfig-get_config_var-wheel_pkg_dir-if-set.patch
 
 # (New patches go here ^^^)
 #
@@ -546,6 +563,14 @@ Summary: The self-test suite for the main python3 package
 Requires: %{pkgname} = %{version}-%{release}
 Requires: %{pkgname}-libs%{?_isa} = %{version}-%{release}
 
+%if %{with rpmwheels}
+Requires: %{python_wheel_pkg_prefix}-setuptools-wheel
+Requires: %{python_wheel_pkg_prefix}-wheel-wheel
+%else
+Provides: bundled(python3dist(setuptools)) = %{setuptools_version}
+Provides: bundled(python3dist(wheel)) = %{wheel_version}
+%endif
+
 %unversioned_obsoletes_of_python3_X_if_main test
 
 %description -n %{pkgname}-test
@@ -600,6 +625,8 @@ The debug runtime additionally supports debug builds of C-API extensions
 
 %if %{with rpmwheels}
 rm Lib/ensurepip/_bundled/pip-%{pip_version}-py3-none-any.whl
+rm Lib/test/setuptools-%{setuptools_version}-py3-none-any.whl
+rm Lib/test/wheel-%{wheel_version}-py3-none-any.whl
 %endif
 
 # Remove all exe files to ensure we are not shipping prebuilt binaries
@@ -1568,6 +1595,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Mon May 29 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~b1-2
+- Use wheels from RPMs, at least on Fedora 39+
+
 * Tue May 23 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b1-1
 - Update to 3.12.0b1
 
