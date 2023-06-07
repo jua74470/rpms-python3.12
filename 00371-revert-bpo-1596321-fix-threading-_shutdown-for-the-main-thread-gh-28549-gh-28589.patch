@@ -16,10 +16,10 @@ https://github.com/GrahamDumpleton/mod_wsgi/issues/730
  2 files changed, 8 insertions(+), 50 deletions(-)
 
 diff --git a/Lib/test/test_threading.py b/Lib/test/test_threading.py
-index 97165264b3..7667ed37e8 100644
+index 9e4972ecb6..6f081d8f38 100644
 --- a/Lib/test/test_threading.py
 +++ b/Lib/test/test_threading.py
-@@ -1015,39 +1015,6 @@ def noop(): pass
+@@ -987,39 +987,6 @@ def noop(): pass
              threading.Thread(target=noop).start()
              # Thread.join() is not called
  
@@ -56,9 +56,9 @@ index 97165264b3..7667ed37e8 100644
 -        self.assertEqual(out, b'')
 -        self.assertEqual(err, b'')
 -
- 
- class ThreadJoinOnShutdown(BaseTestCase):
- 
+     def test_start_new_thread_at_exit(self):
+         code = """if 1:
+             import atexit
 diff --git a/Lib/threading.py b/Lib/threading.py
 index df273870fa..eba297776d 100644
 --- a/Lib/threading.py
