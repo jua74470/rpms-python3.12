@@ -17,7 +17,7 @@ URL: https://www.python.org/
 %global prerel b2
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -58,13 +58,13 @@ License: Python-2.0.1
 #   IMPORTANT: When bootstrapping, it's very likely python-pip-wheel is
 #   not available. Turn off the rpmwheels bcond until
 #   python-pip is built with a wheel to get around the issue.
-%bcond_with bootstrap
+%bcond_without bootstrap
 
 # Whether to use RPM build wheels from the python-{pip,setuptools,wheel}-wheel packages
 # Uses upstream bundled prebuilt wheels otherwise
 # Only F39+ has a pip new enough to work with Python 3.12
 %if 0%{?fedora} >= 39 || 0%{?rhel} >= 10
-%bcond_without rpmwheels
+%bcond_with rpmwheels
 %else
 %bcond_with rpmwheels
 %endif
@@ -127,10 +127,10 @@ Provides: bundled(python3dist(packaging)) = 23
 }
 
 # Expensive optimizations (mainly, profile-guided optimizations)
-%bcond_without optimizations
+%bcond_with optimizations
 
 # Run the test suite in %%check
-%bcond_without tests
+%bcond_with tests
 
 # Extra build for debugging the interpreter or C-API extensions
 # (the -debug subpackages)
@@ -1657,6 +1657,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Tue Jun 13 2023 Python Maint <python-maint@redhat.com> - 3.12.0~b2-2
+- Bootstrap for Python 3.12
+
 * Wed Jun 07 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b2-1
 - Update to 3.12.0b2
 
