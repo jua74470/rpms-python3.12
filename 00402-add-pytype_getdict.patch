@@ -1,0 +1,126 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Eric Snow <ericsnowcurrently@gmail.com>
+Date: Wed, 21 Jun 2023 09:51:01 +0200
+Subject: [PATCH] 00402: Add PyType_GetDict()
+
+This patch should make pyqt6 build with Python 3.12.
+For more info see: https://github.com/python/cpython/pull/105747
+---
+ Doc/c-api/type.rst                              | 16 ++++++++++++++++
+ Doc/c-api/typeobj.rst                           | 17 +++++++++++++++--
+ Include/cpython/object.h                        |  1 +
+ ...23-06-13-14-24-55.gh-issue-105227.HDL9aF.rst |  5 +++++
+ Objects/typeobject.c                            |  7 +++++++
+ 5 files changed, 44 insertions(+), 2 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/C API/2023-06-13-14-24-55.gh-issue-105227.HDL9aF.rst
+
+diff --git a/Doc/c-api/type.rst b/Doc/c-api/type.rst
+index c99c7ef93a..8f883f5299 100644
+--- a/Doc/c-api/type.rst
++++ b/Doc/c-api/type.rst
+@@ -50,6 +50,22 @@ Type Objects
+       The return type is now ``unsigned long`` rather than ``long``.
+ 
+ 
++.. c:function:: PyObject* PyType_GetDict(PyTypeObject* type)
++
++   Return the type object's internal namespace, which is otherwise only
++   exposed via a read-only proxy (``cls.__dict__``).  This is a
++   replacement for accessing :c:member:`~PyTypeObject.tp_dict` directly.
++   The returned dictionary must be treated as read-only.
++
++   This function isn't intended for general use.  It's meant for
++   specific embedding and language-binding cases, where direct access
++   to the dict is necessary and indirect access (e.g. via the proxy)
++   isn't adequate.  Extension modules may continue to use ``tp_dict``,
++   directly or indirectly, when setting up their own types.
++
++   .. versionadded:: 3.12
++
++
+ .. c:function:: void PyType_Modified(PyTypeObject *type)
+ 
+    Invalidate the internal lookup cache for the type and all of its
+diff --git a/Doc/c-api/typeobj.rst b/Doc/c-api/typeobj.rst
+index c6e783acdf..46015bc108 100644
+--- a/Doc/c-api/typeobj.rst
++++ b/Doc/c-api/typeobj.rst
+@@ -110,7 +110,7 @@ Quick Reference
+    +------------------------------------------------+-----------------------------------+-------------------+---+---+---+---+
+    | :c:member:`~PyTypeObject.tp_base`              | :c:type:`PyTypeObject` *          | __base__          |   |   | X |   |
+    +------------------------------------------------+-----------------------------------+-------------------+---+---+---+---+
+-   | :c:member:`~PyTypeObject.tp_dict`              | :c:type:`PyObject` *              | __dict__          |   |   | ? |   |
++   | <<:c:member:`~PyTypeObject.tp_dict`>>          | :c:type:`PyObject` *              | __dict__          |   |   | ? |   |
+    +------------------------------------------------+-----------------------------------+-------------------+---+---+---+---+
+    | :c:member:`~PyTypeObject.tp_descr_get`         | :c:type:`descrgetfunc`            | __get__           |   |   |   | X |
+    +------------------------------------------------+-----------------------------------+-------------------+---+---+---+---+
+@@ -157,6 +157,9 @@ Quick Reference
+    **<>**: Names in angle brackets should be initially set to ``NULL`` and
+    treated as read-only.
+ 
++   **<<>>**: Names in double angle brackets should be initially set to
++   ``NULL`` and treated as read-only after initialization.
++
+    **[]**: Names in square brackets are for internal use only.
+ 
+    **<R>** (as a prefix) means the field is required (must be non-``NULL``).
+@@ -1717,7 +1720,17 @@ and :c:type:`PyType_Type` effectively act as defaults.)
+    called; it may also be initialized to a dictionary containing initial attributes
+    for the type.  Once :c:func:`PyType_Ready` has initialized the type, extra
+    attributes for the type may be added to this dictionary only if they don't
+-   correspond to overloaded operations (like :meth:`__add__`).
++   correspond to overloaded operations (like :meth:`__add__`).  Once
++   initialization for the type has finished, this field should be
++   treated as read-only.
++
++   .. versionchanged:: 3.12
++
++      Internals detail: For the static builtin types this is always ``NULL``.
++      Instead, the dict for each is stored on ``PyInterpreterState``.
++      If needed, use :c:func:`PyType_GetDict` to get the corresponding
++      dict for those types.  This is not normally necessary,
++      and certainly not for user-defined type objects.
+ 
+    **Inheritance:**
+ 
+diff --git a/Include/cpython/object.h b/Include/cpython/object.h
+index d8eff69103..c5d0851a4b 100644
+--- a/Include/cpython/object.h
++++ b/Include/cpython/object.h
+@@ -283,6 +283,7 @@ PyAPI_FUNC(PyTypeObject *) _PyType_CalculateMetaclass(PyTypeObject *, PyObject *
+ PyAPI_FUNC(PyObject *) _PyType_GetDocFromInternalDoc(const char *, const char *);
+ PyAPI_FUNC(PyObject *) _PyType_GetTextSignatureFromInternalDoc(const char *, const char *);
+ PyAPI_FUNC(PyObject *) PyType_GetModuleByDef(PyTypeObject *, PyModuleDef *);
++PyAPI_FUNC(PyObject *) PyType_GetDict(PyTypeObject *);
+ 
+ PyAPI_FUNC(int) PyObject_Print(PyObject *, FILE *, int);
+ PyAPI_FUNC(void) _Py_BreakPoint(void);
+diff --git a/Misc/NEWS.d/next/C API/2023-06-13-14-24-55.gh-issue-105227.HDL9aF.rst b/Misc/NEWS.d/next/C API/2023-06-13-14-24-55.gh-issue-105227.HDL9aF.rst
+new file mode 100644
+index 0000000000..6e0e5396f6
+--- /dev/null
++++ b/Misc/NEWS.d/next/C API/2023-06-13-14-24-55.gh-issue-105227.HDL9aF.rst	
+@@ -0,0 +1,5 @@
++The new :c:func:`PyType_GetDict` provides the dictionary for the given type
++object that is normally exposed by ``cls.__dict__``.  Normally it's
++sufficient to use :c:member:`~PyTypeObject.tp_dict`, but for the static
++builtin types ``tp_dict`` is now always ``NULL``.  ``PyType_GetDict()``
++provides the correct dict object instead.
+diff --git a/Objects/typeobject.c b/Objects/typeobject.c
+index bf33bde257..0deec50d63 100644
+--- a/Objects/typeobject.c
++++ b/Objects/typeobject.c
+@@ -238,6 +238,13 @@ _PyType_GetDict(PyTypeObject *self)
+     return lookup_tp_dict(self);
+ }
+ 
++PyObject *
++PyType_GetDict(PyTypeObject *self)
++{
++    PyObject *dict = lookup_tp_dict(self);
++    return _Py_XNewRef(dict);
++}
++
+ static inline void
+ set_tp_dict(PyTypeObject *self, PyObject *dict)
+ {
