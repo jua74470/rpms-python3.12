@@ -1,3 +1,6 @@
+%global __python3 /usr/bin/python3.12
+%global python3_pkgversion 3.12
+
 # ==================
 # Top-level metadata
 # ==================
@@ -17,8 +20,8 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 2%{?dist}
-License: Python-2.0.1
+Release: 1%{?dist}
+License: Python
 
 
 # ==================================
@@ -31,12 +34,8 @@ License: Python-2.0.1
 # Main Python, i.e. whether this is the main Python version in the distribution
 # that owns /usr/bin/python3 and other unique paths
 # This also means the built subpackages are called python3 rather than python3X
-# By default, this is determined by the %%__default_python3_pkgversion value
-%if "%{?__default_python3_pkgversion}" == "%{pybasever}"
-%bcond_without main_python
-%else
+# RHEL: Disabled by default
 %bcond_with main_python
-%endif
 
 # If this is *not* Main Python, should it contain `Provides: python(abi) ...`?
 # In Fedora no package shall depend on an alternative Python via this tag, so we do not provide it.
@@ -58,16 +57,12 @@ License: Python-2.0.1
 #   IMPORTANT: When bootstrapping, it's very likely python-pip-wheel is
 #   not available. Turn off the rpmwheels bcond until
 #   python-pip is built with a wheel to get around the issue.
-%bcond_with bootstrap
+%bcond_without bootstrap
 
 # Whether to use RPM build wheels from the python-{pip,setuptools,wheel}-wheel packages
 # Uses upstream bundled prebuilt wheels otherwise
-# Only F39+ has a pip new enough to work with Python 3.12
-%if 0%{?fedora} >= 39 || 0%{?rhel} >= 10
-%bcond_without rpmwheels
-%else
 %bcond_with rpmwheels
-%endif
+
 # If the rpmwheels condition is disabled, we use the bundled wheel packages
 # from Python with the versions below.
 # This needs to be manually updated when we update Python.
@@ -210,13 +205,6 @@ Provides: bundled(python3dist(packaging)) = 23
 # on files that test invalid syntax.
 %undefine py_auto_byte_compile
 
-# When a main_python build is attempted despite the %%__default_python3_pkgversion value
-# We undefine magic macros so the python3-... package does not provide wrong python3X-...
-%if %{with main_python} && ("%{?__default_python3_pkgversion}" != "%{pybasever}")
-%undefine __pythonname_provides
-%{warn:Doing a main_python build with wrong %%__default_python3_pkgversion (0%{?__default_python3_pkgversion}, but this is %pyshortver)}
-%endif
-
 %if %{with main_python}
 # To keep the upgrade path clean, we Obsolete python3.X from the python3
 # package and python3.X-foo from individual subpackages.
@@ -272,7 +260,7 @@ BuildRequires: openssl-devel
 BuildRequires: pkgconfig
 BuildRequires: python-rpm-macros
 BuildRequires: readline-devel
-BuildRequires: redhat-rpm-config >= 127
+BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: gdb
 
@@ -499,12 +487,12 @@ Summary:        Python runtime libraries
 %if %{with rpmwheels}
 Requires: %{python_wheel_pkg_prefix}-pip-wheel >= 23.1.2
 # Bundled libb2 is CC0, covered by grandfathering exception
-License: Python-2.0.1 AND CC0-1.0
+License: Python and CC0
 %else
 Provides: bundled(python3dist(pip)) = %{pip_version}
 %pip_bundled_provides
 # License manually combined form Python + pip
-License: Python-2.0.1 AND CC0-1.0 AND MIT AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND ISC AND LGPL-2.1-only AND MPL-2.0 AND (Apache-2.0 OR BSD-2-Clause)
+License: Python and CC0 and MIT and ASL 2.0 and BSD and ISC and LGPLv2 and MPLv2.0 and (ASL 2.0 or BSD)
 %endif
 
 %unversioned_obsoletes_of_python3_X_if_main libs
@@ -547,6 +535,10 @@ Requires: (python3-rpm-macros if rpm-build)
 # from pyproject-srpm-macros instead.
 # On Fedora, we keep this to avoid one additional round of %%generate_buildrequires.
 %{!?rhel:Requires: (pyproject-rpm-macros if rpm-build)}
+
+# We provide the python3.12-rpm-macros here to make it possible to
+# BuildRequire them in the same manner as RHEL8.
+Provides: %{pkgname}-rpm-macros = %{version}-%{release}
 
 %unversioned_obsoletes_of_python3_X_if_main devel
 
@@ -632,12 +624,12 @@ Requires: %{pkgname}-libs%{?_isa} = %{version}-%{release}
 Requires: %{python_wheel_pkg_prefix}-setuptools-wheel
 Requires: %{python_wheel_pkg_prefix}-wheel-wheel
 %else
-Provides: bundled(python3dist(setuptools)) = %{setuptools_version}
+Provides: bundled(python%{python3_pkgversion}dist(setuptools)) = %{setuptools_version}
 %setuptools_bundled_provides
-Provides: bundled(python3dist(wheel)) = %{wheel_version}
+Provides: bundled(python%{python3_pkgversion}dist(wheel)) = %{wheel_version}
 %wheel_bundled_provides
 # License manually combined from Python + setuptools + wheel
-License: Python-2.0.1 AND MIT AND Apache-2.0 AND (Apache-2.0 OR BSD-2-Clause)
+License: Python and MIT and ASL 2.0 and (ASL 2.0 or BSD)
 %endif
 
 %unversioned_obsoletes_of_python3_X_if_main test
@@ -719,6 +711,11 @@ rm -r Modules/_decimal/libmpdec
 # (This is after patching, so that we can use patches directly from upstream)
 rm configure pyconfig.h.in
 
+
+# Python 3.12 requires autoconf 2.71 which is not available in RHEL,
+# we verified that it builds also with autoconf 2.69 therefore we
+# are unpinning it
+sed -i 's/AC_PREREQ(\[2.71/AC_PREREQ(\[2.69/' configure.ac
 
 # ======================================================
 # Configuring and building the code:
@@ -1685,91 +1682,49 @@ CheckPython optimized
 # ======================================================
 
 %changelog
-* Mon Dec 18 2023 Lumír Balhar <lbalhar@redhat.com> - 3.12.1-2
-- Security fix for CVE-2023-27043 (rhbz#2196190)
-
-* Fri Dec 08 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.1-1
-- Update to 3.12.1
-- Own stray directories in /usr/lib64/python3.12
-- Fixes: rhbz#2252143
-
-* Thu Oct 05 2023 Yaakov Selkowitz <yselkowi@redhat.com> - 3.12.0-2
-- Use bundled libb2 in RHEL builds
-
-* Mon Oct 02 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0-1
-- Update to 3.12.0 final
-
-* Tue Sep 19 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~rc3-1
-- Update to 3.12.0rc3
-
-* Wed Sep 06 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~rc2-1
-- Update to 3.12.0rc2
-
-* Mon Aug 07 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~rc1-1
-- Update to 3.12.0rc1
-
-* Wed Aug 02 2023 Charalampos Stratakis <cstratak@redhat.com> - 3.12.0~b4-3
-- Remove extra distro-applied CFLAGS passed to user built C extensions
-- https://fedoraproject.org/wiki/Changes/Python_Extension_Flags_Reduction
-
-* Fri Jul 21 2023 Fedora Release Engineering <releng@fedoraproject.org> - 3.12.0~b4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_39_Mass_Rebuild
-
-* Wed Jul 12 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~b4-1
-- Update to 3.12.0b4
-
-* Wed Jun 21 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b3-2
-- Backport upstream patch to add PyType_GetDict() function
-
-* Tue Jun 20 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b3-1
-- Update to 3.12.0b3
-
-* Tue Jun 13 2023 Python Maint <python-maint@redhat.com> - 3.12.0~b2-3
-- Rebuilt for Python 3.12
-
-* Tue Jun 13 2023 Python Maint <python-maint@redhat.com> - 3.12.0~b2-2
-- Bootstrap for Python 3.12
-
-* Wed Jun 07 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b2-1
-- Update to 3.12.0b2
-
-* Mon May 29 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~b1-2
-- Use wheels from RPMs, at least on Fedora 39+
-- On older Fedora releases, declare bundled() provides and a complex License tag
-
-* Tue May 23 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~b1-1
-- Update to 3.12.0b1
-
-* Wed Apr 05 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a7-1
-- Update to 3.12.0a7
-
-* Thu Mar 23 2023 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~a6-2
-- Increase the test timeout during package build
-
-* Wed Mar 08 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a6-1
-- Update to 3.12.0a6
-
-* Wed Feb 08 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a5-1
-- Update to 3.12.0a5
-
-* Fri Jan 20 2023 Fedora Release Engineering <releng@fedoraproject.org> - 3.12.0~a4-2
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_38_Mass_Rebuild
-
-* Wed Jan 11 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a4-1
-- Update to 3.12.0a4
-
-* Mon Dec 19 2022 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~a3-2
-- No longer patch the default bytecode cache invalidation policy
-
-* Wed Dec 07 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a3-1
-- Update to 3.12.0a3
-
-* Tue Nov 15 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a2-1
-- Update to 3.12.0a2
-- Fixes: rhbz#2133847
-
-* Thu Oct 27 2022 Miro Hrončok <mhroncok@redhat.com> - 3.12.0~a1-2
-- Finish initial bootstrap of Python 3.12.0a1
-
-* Wed Oct 26 2022 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.0~a1-1
-- Initial Python 3.12 package forked from Python 3.11
+* Wed Dec 20 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.1-1
+- Initial package
+- Fedora contributions by:
+      Björn Esser <besser82@fedoraproject.org>
+      Bohuslav Kabrda <bkabrda@redhat.com>
+      Charalampos Stratakis <cstratak@redhat.com>
+      Dan Horák <dan@danny.cz>
+      David Malcolm <dmalcolm@redhat.com>
+      Dennis Gilmore <dennis@ausil.us>
+      Florian Weimer <fweimer@redhat.com>
+      Gwyn Ciesla <limb@fedoraproject.org>
+      Igor Gnatenko <ignatenko@redhat.com>
+      Iryna Shcherbina <shcherbina.iryna@gmail.com>
+      Jaroslav Škarvada <jskarvad@redhat.com>
+      Jason ティビツ <tibbs@fedoraproject.org>
+      Kalev Lember <klember@redhat.com>
+      Karsten Hopp <karsten@redhat.com>
+      Lumir Balhar <lbalhar@redhat.com>
+      Marcel Plch <marcel.plch@protonmail.com>
+      Matej Stuchlik <mstuchli@redhat.com>
+      Michal Cyprian <m.cyprian@gmail.com>
+      Michal Toman <mtoman@fedoraproject.org>
+      Miro Hrončok <miro@hroncok.cz>
+      Nicolas Chauvet <kwizart@gmail.com>
+      Orion Poplawski <orion@cora.nwra.com>
+      Patrik Kopkan <pkopkan@redhat.com>
+      Peter Robinson <pbrobinson@gmail.com>
+      Petr Šplíchal <psplicha@redhat.com>
+      Petr Viktorin <pviktori@redhat.com>
+      Rex Dieter <rdieter@fedoraproject.org>
+      Richard W.M. Jones <rjones@redhat.com>
+      Robert Kuska <rkuska@gmail.com>
+      Sahana Prasad <sahana@redhat.com>
+      Stephen Gallagher <sgallagh@redhat.com>
+      Than Ngo <than@redhat.com>
+      Thomas Spura <thomas.spura@gmail.com>
+      Till Maas <opensource@till.name>
+      Tomáš Hrnčiar <thrnciar@redhat.com>
+      Tomas Mraz <tmraz@fedoraproject.org>
+      Tomas Orsava <torsava@redhat.com>
+      Tomas Radej <tradej@redhat.com>
+      Toshio Kuratomi <toshio@fedoraproject.org>
+      Victor Stinner <vstinner@python.org>
+      Ville Skyttä <ville.skytta@iki.fi>
+      Yaakov Selkowitz <yselkowi@redhat.com>
+      Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
