@@ -386,6 +386,14 @@ Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-par
 # Descriptions, and metadata for subpackages
 # ==========================================
 
+# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
+Requires:         alternatives >= 1.19.2-1
+Requires(post):   alternatives >= 1.19.2-1
+Requires(postun): alternatives >= 1.19.2-1
+
+# When the user tries to `yum install python`, yum will list this package among
+# the possible alternatives
+Provides: alternative-for(python)
 
 %if %{with main_python}
 # Description for the python3X SRPM only:
@@ -460,6 +468,7 @@ Documentation for Python is provided in the %{pkgname}-docs package.
 Packages containing additional libraries for Python are generally named with
 the "%{pkgname}-" prefix.
 
+For the unversioned "python" executable, see manual page "unversioned-python".
 
 %if %{with main_python}
 # https://fedoraproject.org/wiki/Changes/Move_usr_bin_python_into_separate_package
@@ -540,6 +549,13 @@ Requires: (python3-rpm-macros if rpm-build)
 # On Fedora, we keep this to avoid one additional round of %%generate_buildrequires.
 %{!?rhel:Requires: (pyproject-rpm-macros if rpm-build)}
 
+# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
+Requires(postun): alternatives >= 1.19.2-1
+
+# python3.12 installs the alternatives master symlink to which we attach a slave
+Requires(post): %{pkgname}
+Requires(postun): %{pkgname}
+
 %unversioned_obsoletes_of_python3_X_if_main devel
 
 %if %{with main_python}
@@ -586,6 +602,13 @@ Provides: idle = %{version}-%{release}
 
 Provides: %{pkgname}-tools = %{version}-%{release}
 Provides: %{pkgname}-tools%{?_isa} = %{version}-%{release}
+
+# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
+Requires(postun): alternatives >= 1.19.2-1
+
+# python3.12 installs the alternatives master symlink to which we attach a slave
+Requires(post): %{pkgname}
+Requires(postun): %{pkgname}
 
 %description -n %{pkgname}-idle
 IDLE is Python’s Integrated Development and Learning Environment.
@@ -657,6 +680,13 @@ Requires: %{pkgname}-tkinter%{?_isa} = %{version}-%{release}
 Requires: %{pkgname}-idle%{?_isa} = %{version}-%{release}
 
 %unversioned_obsoletes_of_python3_X_if_main debug
+
+# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
+Requires(postun): alternatives >= 1.19.2-1
+
+# python3.12 installs the alternatives master symlink to which we attach a slave
+Requires(post): %{pkgname}
+Requires(postun): %{pkgname}
 
 %description -n %{pkgname}-debug
 python3-debug provides a version of the Python runtime with numerous debugging
@@ -1123,6 +1153,19 @@ mkdir -p %{buildroot}%{_rpmconfigdir}/redhat
 install -m 644 %{SOURCE4} %{buildroot}%{_rpmconfigdir}/redhat/
 install -m 644 %{SOURCE5} %{buildroot}%{_rpmconfigdir}/redhat/
 
+# All ghost files controlled by alternatives need to exist for the files
+# section check to succeed
+# - Don't list /usr/bin/python as a ghost file so `yum install /usr/bin/python`
+#   doesn't install this package
+touch %{buildroot}%{_bindir}/unversioned-python
+touch %{buildroot}%{_mandir}/man1/python.1.gz
+touch %{buildroot}%{_bindir}/python3
+touch %{buildroot}%{_mandir}/man1/python3.1.gz
+touch %{buildroot}%{_bindir}/pydoc3
+touch %{buildroot}%{_bindir}/pydoc-3
+touch %{buildroot}%{_bindir}/idle3
+touch %{buildroot}%{_bindir}/python3-config
+
 # ======================================================
 # Checks for packaging issues
 # ======================================================
@@ -1207,6 +1250,101 @@ CheckPython optimized
 
 %endif # with tests
 
+# ======================================================
+# Scriptlets for alternatives on rhel8
+# ======================================================
+%post
+# Alternative for /usr/bin/python -> /usr/bin/python3 + man page
+alternatives --install %{_bindir}/unversioned-python \
+                        python \
+                        %{_bindir}/python3 \
+                        300 \
+              --slave   %{_bindir}/python \
+                        unversioned-python \
+                        %{_bindir}/python3 \
+              --slave   %{_mandir}/man1/python.1.gz \
+                        unversioned-python-man \
+                        %{_mandir}/man1/python3.1.gz
+
+# Alternative for /usr/bin/python -> /usr/bin/python3.12 + man page
+alternatives --install %{_bindir}/unversioned-python \
+                        python \
+                        %{_bindir}/python3.12 \
+                        211 \
+              --slave   %{_bindir}/python \
+                        unversioned-python \
+                        %{_bindir}/python3.12 \
+              --slave   %{_mandir}/man1/python.1.gz \
+                        unversioned-python-man \
+                        %{_mandir}/man1/python3.12.1.gz
+
+# Alternative for /usr/bin/python3 -> /usr/bin/python3.12 + related files
+# Create only if it doesn't exist already
+EXISTS=`alternatives --display python3 | \
+         grep -c "^/usr/bin/python3.12 - priority [0-9]*"`
+
+if [ $EXISTS -eq 0 ]; then
+     alternatives --install %{_bindir}/python3 \
+                            python3 \
+                            %{_bindir}/python3.12 \
+                            31200 \
+                  --slave   %{_mandir}/man1/python3.1.gz \
+                            python3-man \
+                            %{_mandir}/man1/python3.12.1.gz \
+                  --slave   %{_bindir}/pydoc3 \
+                            pydoc3 \
+                            %{_bindir}/pydoc3.12 \
+                  --slave   %{_bindir}/pydoc-3 \
+                            pydoc-3 \
+                            %{_bindir}/pydoc3.12
+fi
+
+%postun
+# Do this only during uninstall process (not during update)
+if [ $1 -eq 0 ]; then
+     alternatives --keep-foreign --remove python \
+                         %{_bindir}/python3.12
+
+     alternatives --keep-foreign --remove python3 \
+                         %{_bindir}/python3.12
+
+     # Remove link python → python3 if no other python3.* exists
+     if ! alternatives --display python3 > /dev/null; then
+         alternatives --keep-foreign --remove python \
+                             %{_bindir}/python3
+     fi
+fi
+
+
+%post devel
+alternatives --add-slave python3 %{_bindir}/python3.12 \
+     %{_bindir}/python3-config \
+     python3-config \
+     %{_bindir}/python3.12-config
+
+%postun devel
+# Do this only during uninstall process (not during update)
+if [ $1 -eq 0 ]; then
+     alternatives --keep-foreign --remove-slave python3 %{_bindir}/python3.12 \
+         python3-config
+fi
+
+%post idle
+alternatives --add-slave python3 %{_bindir}/python3.12 \
+     %{_bindir}/idle3 \
+     idle3 \
+     %{_bindir}/idle3.12
+
+%postun idle
+# Do this only during uninstall process (not during update)
+if [ $1 -eq 0 ]; then
+     alternatives --keep-foreign --remove-slave python3 %{_bindir}/python3.12 \
+        idle3
+fi
+
+# ======================================================
+# Files for each RPM (sub)package
+# ======================================================
 
 %files -n %{pkgname}-rpm-macros
 %{rpmmacrodir}/macros.python%{pybasever}
@@ -1216,6 +1354,14 @@ CheckPython optimized
 
 %files -n %{pkgname}
 %doc README.rst
+
+# Alternatives
+%ghost %{_bindir}/unversioned-python
+%ghost %{_mandir}/man1/python.1.gz
+%ghost %{_bindir}/python3
+%ghost %{_mandir}/man1/python3.1.gz
+%ghost %{_bindir}/pydoc3
+%ghost %{_bindir}/pydoc-3
 
 %if %{with main_python}
 %{_bindir}/pydoc*
@@ -1512,6 +1658,9 @@ CheckPython optimized
 %{_bindir}/python%{pybasever}-config
 %{_bindir}/python%{LDVERSION_optimized}-config
 %{_bindir}/python%{LDVERSION_optimized}-*-config
+# Alternatives
+%ghost %{_bindir}/python3-config
+
 %{_libdir}/libpython%{LDVERSION_optimized}.so
 %{_libdir}/pkgconfig/python-%{LDVERSION_optimized}.pc
 %{_libdir}/pkgconfig/python-%{LDVERSION_optimized}-embed.pc
@@ -1524,6 +1673,8 @@ CheckPython optimized
 %{_bindir}/idle*
 %else
 %{_bindir}/idle%{pybasever}
+# Alternatives
+%ghost %{_bindir}/idle3
 %endif
 
 %{pylibdir}/idlelib
