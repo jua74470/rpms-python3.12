@@ -16,9 +16,11 @@ LEVELS = (None, 1, 2)
 # list of globs of test and other files that we expect not to have bytecode
 not_compiled = [
     '/usr/bin/*',
-    '*/test/bad_coding.py',
-    '*/test/bad_coding2.py',
     '*/test/badsyntax_*.py',
+    '*/tokenizedata/bad_coding.py',
+    '*/tokenizedata/bad_coding2.py',
+    '*/tokenizedata/badsyntax_*.py',
+    '*/test_future_stmt/badsyntax_*.py',
     '*/test_lib2to3/data/*.py',
     '*/test_lib2to3/data/*/*.py',
     '*/test_lib2to3/data/*/*/*.py',

@@ -13,11 +13,11 @@ URL: https://www.python.org/
 
 #  WARNING  When rebasing to a new Python version,
 #           remember to update the python3-docs package as well
-%global general_version %{pybasever}.0
+%global general_version %{pybasever}.1
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 2%{?dist}
+Release: 1%{?dist}
 License: Python-2.0.1
 
 
@@ -1666,6 +1666,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Fri Dec 08 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.1-1
+- Update to 3.12.1
+
 * Thu Oct 05 2023 Yaakov Selkowitz <yselkowi@redhat.com> - 3.12.0-2
 - Use bundled libb2 in RHEL builds
 
