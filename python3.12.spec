@@ -20,7 +20,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python
 
 
@@ -57,11 +57,11 @@ License: Python
 #   IMPORTANT: When bootstrapping, it's very likely python-pip-wheel is
 #   not available. Turn off the rpmwheels bcond until
 #   python-pip is built with a wheel to get around the issue.
-%bcond_without bootstrap
+%bcond_with bootstrap
 
 # Whether to use RPM build wheels from the python-{pip,setuptools,wheel}-wheel packages
 # Uses upstream bundled prebuilt wheels otherwise
-%bcond_with rpmwheels
+%bcond_without rpmwheels
 # If the rpmwheels condition is disabled, we use the bundled wheel packages
 # from Python with the versions below.
 # This needs to be manually updated when we update Python.
@@ -1862,6 +1862,9 @@ fi
 # ======================================================
 
 %changelog
+* Wed Dec 20 2023 Charalampos Stratakis <cstratak@redhat.com> - 3.12.1-2
+- Disable bootstrap
+
 * Wed Dec 20 2023 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.1-1
 - Initial package
 - Fedora contributions by:
