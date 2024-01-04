@@ -19,15 +19,6 @@
     tests:
     - rpm_qa:
         run: rpm -qa
-    - smoke:
-        dir: python/smoke
-        run: "VERSION={{ pybasever }} ./venv.sh"
-    - smoke_virtualenv:
-        dir: python/smoke
-        run: "VERSION={{ pybasever }} METHOD=virtualenv ./venv.sh"
-    - debugsmoke:
-        dir: python/smoke
-        run: "PYTHON=python{{ pybasever }}d TOX=false VERSION={{ pybasever }} ./venv.sh"
     - selftest:
         dir: python/selftest
         run: "VERSION={{ pybasever }} X='-i test_check_probes' ./parallel.sh"
@@ -37,9 +28,21 @@
     - debugflags:
         dir: python/flags
         run: "python{{ pybasever }}d ./assertflags.py -O0"
-    - marshalparser:
-        dir: python/marshalparser
-        run: "VERSION={{ pybasever }} SAMPLE=10 test_marshalparser_compatibility.sh"
+    - pytest:
+        dir: .
+        run: PYTHONPATH=/usr/lib/rpm/redhat ALTERNATE_PYTHON_VERSION=skip pytest-3.12 -v
+    - manual_byte_compilation_clamp_mtime_off:
+        dir: .
+        run: rpmbuild --define 'dist .clamp0' --define 'clamp_mtime_to_source_date_epoch 0' -ba pythontest.spec
+    - manual_byte_compilation_clamp_mtime_on:
+        dir: .
+        run: rpmbuild --define 'dist .clamp1' --define 'clamp_mtime_to_source_date_epoch 1' -ba pythontest.spec
+    - rpmlint_clamp_mtime_off:
+        dir: .
+        run: rpmlint ~/rpmbuild/RPMS/x86_64/pythontest-0-0.clamp0.x86_64.rpm | grep python-bytecode-inconsistent-mtime || exit 0 && exit 1
+    - rpmlint_clamp_mtime_on:
+        dir: .
+        run: rpmlint ~/rpmbuild/RPMS/x86_64/pythontest-0-0.clamp1.x86_64.rpm | grep python-bytecode-inconsistent-mtime || exit 0 && exit 1
     required_packages:
     - gcc  # for extension building in venv and selftest
     - gcc-c++ # for test_cppext
@@ -49,8 +52,16 @@
     - "python{{ pybasever }}-devel"  # for extension building in venv and selftest
     - "python{{ pybasever }}-tkinter"  # for selftest
     - "python{{ pybasever }}-test"  # for selftest
-    - tox  # for venv tests
-    - virtualenv  # for virtualenv tests
     - glibc-all-langpacks # for locale tests
-    - marshalparser  # for testing compatibility (magic numbers) with marshalparser
     - rpm  # for debugging
+    - rpm-build
+    - rpmlint
+    - python-rpm-macros
+    - python3-rpm-macros
+    - python3.12-rpm-macros
+    - python3.12-devel
+    - python3.12-pytest
+    - python3
+    - python3-devel
+    - python2
+
