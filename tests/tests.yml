@@ -41,6 +41,8 @@
         dir: python/marshalparser
         run: "VERSION={{ pybasever }} SAMPLE=10 test_marshalparser_compatibility.sh"
     required_packages:
+    - 'https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm'
+    - 'https://dl.fedoraproject.org/pub/epel/epel-next-release-latest-9.noarch.rpm'
     - gcc  # for extension building in venv and selftest
     - gcc-c++ # for test_cppext
     - gdb  # for test_gdb
