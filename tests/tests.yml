@@ -19,6 +19,9 @@
     tests:
     - rpm_qa:
         run: rpm -qa
+    - smoke:
+        dir: python/smoke
+        run: "VERSION={{ pybasever }} TOX=false ./venv.sh"
     - selftest:
         dir: python/selftest
         run: "VERSION={{ pybasever }} X='-i test_check_probes' ./parallel.sh"
