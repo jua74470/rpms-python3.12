@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 5%{?dist}
+Release: 6%{?dist}
 License: Python-2.0.1
 
 
@@ -363,6 +363,21 @@ Source11: idle3.appdata.xml
 #
 # pypa/distutils integration: https://github.com/pypa/distutils/pull/70
 Patch251: 00251-change-user-install-location.patch
+
+# 00329 #
+# Support OpenSSL FIPS mode
+# - In FIPS mode, OpenSSL wrappers are always used in hashlib
+# - The "usedforsecurity" keyword argument can be used to the various digest
+#   algorithms in hashlib so that you can whitelist a callsite with
+#   "usedforsecurity=False"
+# - OpenSSL wrappers for the hashes blake2{b512,s256},
+# - In FIPS mode, the blake2 hashes use OpenSSL wrappers
+#   and do not offer extended functionality (keys, tree hashing, custom digest size)
+#
+# - In FIPS mode, hmac.HMAC can only be instantiated with an OpenSSL wrapper
+#   or a string with OpenSSL hash name as the "digestmod" argument.
+#   The argument must be specified (instead of defaulting to ‘md5’).
+Patch329: 00329-fips.patch
 
 # 00371 # d917a50238c94c652bc30ae9061d65f60cc8accd
 # Revert "bpo-1596321: Fix threading._shutdown() for the main thread (GH-28549) (GH-28589)"
@@ -854,6 +869,7 @@ BuildPython() {
   --with-dtrace \
   --with-lto \
   --with-ssl-default-suites=openssl \
+  --with-builtin-hashlib-hashes=blake2 \
   --without-static-libpython \
 %if %{with rpmwheels}
   --with-wheel-pkg-dir=%{python_wheel_dir} \
@@ -1336,10 +1352,6 @@ CheckPython optimized
 %{pylibdir}/pydoc_data
 
 %{dynload_dir}/_blake2.%{SOABI_optimized}.so
-%{dynload_dir}/_md5.%{SOABI_optimized}.so
-%{dynload_dir}/_sha1.%{SOABI_optimized}.so
-%{dynload_dir}/_sha2.%{SOABI_optimized}.so
-%{dynload_dir}/_sha3.%{SOABI_optimized}.so
 
 %{dynload_dir}/_asyncio.%{SOABI_optimized}.so
 %{dynload_dir}/_bisect.%{SOABI_optimized}.so
@@ -1633,10 +1645,6 @@ CheckPython optimized
 # ...with debug builds of the built-in "extension" modules:
 
 %{dynload_dir}/_blake2.%{SOABI_debug}.so
-%{dynload_dir}/_md5.%{SOABI_debug}.so
-%{dynload_dir}/_sha1.%{SOABI_debug}.so
-%{dynload_dir}/_sha2.%{SOABI_debug}.so
-%{dynload_dir}/_sha3.%{SOABI_debug}.so
 
 %{dynload_dir}/_asyncio.%{SOABI_debug}.so
 %{dynload_dir}/_bisect.%{SOABI_debug}.so
@@ -1771,6 +1779,11 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Tue May 28 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.2-6
+- Support OpenSSL FIPS mode
+- Disable the builtin hashlib hashes except blake2
+Resolves: RHEL-39066
+
 * Wed Apr 24 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.2-5
 - Add Red Hat configuration for CVE-2007-4559
 Resolves: RHEL-33847
