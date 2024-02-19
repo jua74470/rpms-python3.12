@@ -20,7 +20,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: Python
 
 
@@ -369,6 +369,12 @@ Patch329: 00329-fips.patch
 # https://bodhi.fedoraproject.org/updates/FEDORA-2021-e152ce5f31
 # https://github.com/GrahamDumpleton/mod_wsgi/issues/730
 Patch371: 00371-revert-bpo-1596321-fix-threading-_shutdown-for-the-main-thread-gh-28549-gh-28589.patch
+
+# 00397 #
+# Red Hat configuration for tarfile extraction (CVE-2007-4559, PEP-706)
+# see KB for documentation:
+# - https://access.redhat.com/articles/7004769
+Patch397: 00397-tarfile-filter.patch
 
 # 00415 # 83e0fc3ec7bc38055c536f482578a10f6efcc08c
 # [CVE-2023-27043] gh-102988: Reject malformed addresses in email.parseaddr() (#111116)
@@ -1690,6 +1696,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Mon Feb 19 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.1-4
+- Add Red Hat configuration for CVE-2007-4559
+
 * Thu Jan 18 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.1-3
 - Support OpenSSL FIPS mode
 - Disable the builtin hashlib hashes except blake2
