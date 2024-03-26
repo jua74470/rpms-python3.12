@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: Python-2.0.1
 
 
@@ -394,6 +394,13 @@ Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-par
 # Reported upstream: https://github.com/python/cpython/issues/114240
 # and https://github.com/python/cpython/issues/114244
 Patch418: 00418-don-t-generate-sbom-in-make-regen-all.patch
+
+# 00422 # a353cebef737c41420dc7ae2469dd657371b8881
+# gh-115133: Fix tests for XMLPullParser with Expat 2.6.0
+#
+# Feeding the parser by too small chunks defers parsing to prevent
+# CVE-2023-52425. Future versions of Expat may be more reactive.
+Patch422: 00422-gh-115133-fix-tests-for-xmlpullparser-with-expat-2-6-0.patch
 
 # (New patches go here ^^^)
 #
@@ -1388,10 +1395,6 @@ CheckPython optimized
 %{dynload_dir}/termios.%{SOABI_optimized}.so
 %{dynload_dir}/unicodedata.%{SOABI_optimized}.so
 %{dynload_dir}/_uuid.%{SOABI_optimized}.so
-%{dynload_dir}/xxlimited.%{SOABI_optimized}.so
-%{dynload_dir}/xxlimited_35.%{SOABI_optimized}.so
-%{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
-%{dynload_dir}/xxsubtype.%{SOABI_optimized}.so
 %{dynload_dir}/zlib.%{SOABI_optimized}.so
 %{dynload_dir}/_zoneinfo.%{SOABI_optimized}.so
 
@@ -1491,12 +1494,6 @@ CheckPython optimized
 %{pylibdir}/zipfile/_path/__pycache__/*%{bytecode_suffixes}
 
 %{pylibdir}/zoneinfo
-
-%dir %{pylibdir}/__phello__/
-%dir %{pylibdir}/__phello__/__pycache__/
-%{pylibdir}/__phello__/__init__.py
-%{pylibdir}/__phello__/spam.py
-%{pylibdir}/__phello__/__pycache__/*%{bytecode_suffixes}
 
 %if "%{_lib}" == "lib64"
 %attr(0755,root,root) %dir %{_prefix}/lib/python%{pybasever}
@@ -1600,7 +1597,17 @@ CheckPython optimized
 %{dynload_dir}/_testmultiphase.%{SOABI_optimized}.so
 %{dynload_dir}/_testsinglephase.%{SOABI_optimized}.so
 %{dynload_dir}/_xxinterpchannels.%{SOABI_optimized}.so
+%{dynload_dir}/_xxsubinterpreters.%{SOABI_optimized}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_optimized}.so
+%{dynload_dir}/xxlimited.%{SOABI_optimized}.so
+%{dynload_dir}/xxlimited_35.%{SOABI_optimized}.so
+%{dynload_dir}/xxsubtype.%{SOABI_optimized}.so
+
+%dir %{pylibdir}/__phello__/
+%dir %{pylibdir}/__phello__/__pycache__/
+%{pylibdir}/__phello__/__init__.py
+%{pylibdir}/__phello__/spam.py
+%{pylibdir}/__phello__/__pycache__/*%{bytecode_suffixes}
 
 # We don't bother splitting the debug build out into further subpackages:
 # if you need it, you're probably a developer.
@@ -1686,10 +1693,6 @@ CheckPython optimized
 %{dynload_dir}/termios.%{SOABI_debug}.so
 %{dynload_dir}/unicodedata.%{SOABI_debug}.so
 %{dynload_dir}/_uuid.%{SOABI_debug}.so
-%{dynload_dir}/xxlimited.%{SOABI_debug}.so
-%{dynload_dir}/xxlimited_35.%{SOABI_debug}.so
-%{dynload_dir}/_xxsubinterpreters.%{SOABI_debug}.so
-%{dynload_dir}/xxsubtype.%{SOABI_debug}.so
 %{dynload_dir}/zlib.%{SOABI_debug}.so
 %{dynload_dir}/_zoneinfo.%{SOABI_debug}.so
 
@@ -1733,7 +1736,11 @@ CheckPython optimized
 %{dynload_dir}/_testmultiphase.%{SOABI_debug}.so
 %{dynload_dir}/_testsinglephase.%{SOABI_debug}.so
 %{dynload_dir}/_xxinterpchannels.%{SOABI_debug}.so
+%{dynload_dir}/_xxsubinterpreters.%{SOABI_debug}.so
 %{dynload_dir}/_xxtestfuzz.%{SOABI_debug}.so
+%{dynload_dir}/xxlimited.%{SOABI_debug}.so
+%{dynload_dir}/xxlimited_35.%{SOABI_debug}.so
+%{dynload_dir}/xxsubtype.%{SOABI_debug}.so
 
 %{pylibdir}/_sysconfigdata_%{ABIFLAGS_debug}_linux_%{platform_triplet}.py
 %{pylibdir}/__pycache__/_sysconfigdata_%{ABIFLAGS_debug}_linux_%{platform_triplet}%{bytecode_suffixes}
@@ -1761,6 +1768,15 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Thu Mar 21 2024 Miro Hrončok <mhroncok@redhat.com> - 3.12.2-3
+- Fix tests for XMLPullParser with Expat 2.6.0
+- Move all test modules to the python3-test package, namely:
+   - __phello__
+   - _xxsubinterpreters
+   - xxlimited
+   - xxlimited_35
+   - xxsubtype
+
 * Mon Mar 04 2024 Lumír Balhar <lbalhar@redhat.com> - 3.12.2-2
 - Add provides and symbolic links for compatibility with platform-python
 Resolves: RHEL-27855
