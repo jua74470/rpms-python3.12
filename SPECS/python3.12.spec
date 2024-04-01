@@ -62,6 +62,7 @@ License: Python
 # Whether to use RPM build wheels from the python-{pip,setuptools,wheel}-wheel packages
 # Uses upstream bundled prebuilt wheels otherwise
 %bcond_without rpmwheels
+
 # If the rpmwheels condition is disabled, we use the bundled wheel packages
 # from Python with the versions below.
 # This needs to be manually updated when we update Python.
@@ -313,11 +314,6 @@ Source1: %{url}ftp/python/%{general_version}/Python-%{upstream_version}.tar.xz.a
 # The release manager for Python 3.12 is Thomas Wouters
 Source2: https://github.com/Yhg1s.gpg
 
-# Sources for the python3.12-rpm-macros
-Source3: macros.python3.12
-Source4: import_all_modules_py3_12.py
-Source5: pathfix_py3_12.py
-
 # A simple script to check timestamps of bytecode files
 # Run in check section with Python that is currently being built
 # Originally written by bkabrda
@@ -407,14 +403,6 @@ Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-par
 # Descriptions, and metadata for subpackages
 # ==========================================
 
-# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
-Requires:         alternatives >= 1.19.2-1
-Requires(post):   alternatives >= 1.19.2-1
-Requires(postun): alternatives >= 1.19.2-1
-
-# When the user tries to `yum install python`, yum will list this package among
-# the possible alternatives
-Provides: alternative-for(python)
 
 %if %{with main_python}
 # Description for the python3X SRPM only:
@@ -489,7 +477,6 @@ Documentation for Python is provided in the %{pkgname}-docs package.
 Packages containing additional libraries for Python are generally named with
 the "%{pkgname}-" prefix.
 
-For the unversioned "python" executable, see manual page "unversioned-python".
 
 %if %{with main_python}
 # https://fedoraproject.org/wiki/Changes/Move_usr_bin_python_into_separate_package
@@ -570,12 +557,9 @@ Requires: (python3-rpm-macros if rpm-build)
 # On Fedora, we keep this to avoid one additional round of %%generate_buildrequires.
 %{!?rhel:Requires: (pyproject-rpm-macros if rpm-build)}
 
-# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
-Requires(postun): alternatives >= 1.19.2-1
-
-# python3.12 installs the alternatives master symlink to which we attach a slave
-Requires(post): %{pkgname}
-Requires(postun): %{pkgname}
+# We provide the python3.12-rpm-macros here to make it possible to
+# BuildRequire them in the same manner as RHEL8.
+Provides: %{pkgname}-rpm-macros = %{version}-%{release}
 
 %unversioned_obsoletes_of_python3_X_if_main devel
 
@@ -623,13 +607,6 @@ Provides: idle = %{version}-%{release}
 
 Provides: %{pkgname}-tools = %{version}-%{release}
 Provides: %{pkgname}-tools%{?_isa} = %{version}-%{release}
-
-# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
-Requires(postun): alternatives >= 1.19.2-1
-
-# python3.12 installs the alternatives master symlink to which we attach a slave
-Requires(post): %{pkgname}
-Requires(postun): %{pkgname}
 
 %description -n %{pkgname}-idle
 IDLE is Python’s Integrated Development and Learning Environment.
@@ -702,13 +679,6 @@ Requires: %{pkgname}-idle%{?_isa} = %{version}-%{release}
 
 %unversioned_obsoletes_of_python3_X_if_main debug
 
-# Require alternatives version that implements the --keep-foreign flag and fixes rhbz#2203820
-Requires(postun): alternatives >= 1.19.2-1
-
-# python3.12 installs the alternatives master symlink to which we attach a slave
-Requires(post): %{pkgname}
-Requires(postun): %{pkgname}
-
 %description -n %{pkgname}-debug
 python3-debug provides a version of the Python runtime with numerous debugging
 features enabled, aimed at advanced Python users such as developers of Python
@@ -727,24 +697,6 @@ The debug runtime additionally supports debug builds of C-API extensions
 %endif # with debug_build
 
 
-# We package the python3.12-rpm-macros in RHEL8 as to properly set the
-# %%__python3 and %%python3_pkgversion macros as well as provide modern
-# versions the current base macros.
-%package -n %{pkgname}-rpm-macros
-Summary:    RPM macros for building RPMs with Python %{pybasever}
-License:    MIT
-Provides:   python-modular-rpm-macros == %{pybasever}
-Conflicts:  python-modular-rpm-macros > %{pybasever}
-Requires:   python3-rpm-macros
-BuildArch:  noarch
-
-%description -n %{pkgname}-rpm-macros
-RPM macros for building RPMs with Python %{pybasever} from the python%{pyshortver} module.
-If you want to build an RPM against the python%{pyshortver} module, you need to add:
-
-    BuildRequire: %{pkgname}-rpm-macros.
-
-
 # ======================================================
 # The prep phase of the build:
 # ======================================================
@@ -752,6 +704,14 @@ If you want to build an RPM against the python%{pyshortver} module, you need to 
 %prep
 %gpgverify -k2 -s1 -d0
 %autosetup -S git_am -n Python-%{upstream_version}
+
+# Verify the second level of bundled provides is up to date
+# Arguably this should be done in %%check, but %%prep has a faster feedback loop
+# setuptools.whl does not contain the vendored.txt files
+if [ -f %{_rpmconfigdir}/pythonbundles.py ]; then
+  %{_rpmconfigdir}/pythonbundles.py <(unzip -p Lib/ensurepip/_bundled/pip-*.whl pip/_vendor/vendor.txt) --compare-with '%pip_bundled_provides'
+  %{_rpmconfigdir}/pythonbundles.py <(unzip -p Lib/test/wheel-*.whl wheel/vendored/vendor.txt) --compare-with '%wheel_bundled_provides'
+fi
 
 %if %{with rpmwheels}
 rm Lib/ensurepip/_bundled/pip-%{pip_version}-py3-none-any.whl
@@ -1059,11 +1019,8 @@ done
 # Switch all shebangs to refer to the specific Python version.
 # This currently only covers files matching ^[a-zA-Z0-9_]+\.py$,
 # so handle files named using other naming scheme separately.
-# - RHEL 8 note: we use %%{SOURCE5} instead of pathfix.py, because in RHEL 8 we
-#   ship our own versioned pathfix_py3_12.py in this package, but during
-#   bootstrap it's not yet installed.
 LD_LIBRARY_PATH=./build/optimized ./build/optimized/python \
-  %{SOURCE5} \
+  %{_rpmconfigdir}/redhat/pathfix.py \
   -i "%{_bindir}/python%{pybasever}" -pn \
   %{buildroot} \
   %{buildroot}%{_bindir}/*%{pybasever}.py \
@@ -1165,29 +1122,6 @@ for file in %{buildroot}%{pylibdir}/pydoc_data/topics.py $(grep --include='*.py'
     rm ${directory}/{__pycache__/${module}.cpython-%{pyshortver}.opt-?.pyc,${module}.py}
 done
 
-# Python RPM macros for python3.12-rpm-macros
-mkdir -p %{buildroot}%{rpmmacrodir}/
-install -m 644 %{SOURCE3} \
-    %{buildroot}/%{rpmmacrodir}/
-
-# Add scripts that are being used by python3.12-rpm-macros
-mkdir -p %{buildroot}%{_rpmconfigdir}/redhat
-install -m 644 %{SOURCE4} %{buildroot}%{_rpmconfigdir}/redhat/
-install -m 644 %{SOURCE5} %{buildroot}%{_rpmconfigdir}/redhat/
-
-# All ghost files controlled by alternatives need to exist for the files
-# section check to succeed
-# - Don't list /usr/bin/python as a ghost file so `yum install /usr/bin/python`
-#   doesn't install this package
-touch %{buildroot}%{_bindir}/unversioned-python
-touch %{buildroot}%{_mandir}/man1/python.1.gz
-touch %{buildroot}%{_bindir}/python3
-touch %{buildroot}%{_mandir}/man1/python3.1.gz
-touch %{buildroot}%{_bindir}/pydoc3
-touch %{buildroot}%{_bindir}/pydoc-3
-touch %{buildroot}%{_bindir}/idle3
-touch %{buildroot}%{_bindir}/python3-config
-
 # ======================================================
 # Checks for packaging issues
 # ======================================================
@@ -1272,118 +1206,9 @@ CheckPython optimized
 
 %endif # with tests
 
-# ======================================================
-# Scriptlets for alternatives on rhel8
-# ======================================================
-%post
-# Alternative for /usr/bin/python -> /usr/bin/python3 + man page
-alternatives --install %{_bindir}/unversioned-python \
-                        python \
-                        %{_bindir}/python3 \
-                        300 \
-              --slave   %{_bindir}/python \
-                        unversioned-python \
-                        %{_bindir}/python3 \
-              --slave   %{_mandir}/man1/python.1.gz \
-                        unversioned-python-man \
-                        %{_mandir}/man1/python3.1.gz
-
-# Alternative for /usr/bin/python -> /usr/bin/python3.12 + man page
-alternatives --install %{_bindir}/unversioned-python \
-                        python \
-                        %{_bindir}/python3.12 \
-                        211 \
-              --slave   %{_bindir}/python \
-                        unversioned-python \
-                        %{_bindir}/python3.12 \
-              --slave   %{_mandir}/man1/python.1.gz \
-                        unversioned-python-man \
-                        %{_mandir}/man1/python3.12.1.gz
-
-# Alternative for /usr/bin/python3 -> /usr/bin/python3.12 + related files
-# Create only if it doesn't exist already
-EXISTS=`alternatives --display python3 | \
-         grep -c "^/usr/bin/python3.12 - priority [0-9]*"`
-
-if [ $EXISTS -eq 0 ]; then
-     alternatives --install %{_bindir}/python3 \
-                            python3 \
-                            %{_bindir}/python3.12 \
-                            31200 \
-                  --slave   %{_mandir}/man1/python3.1.gz \
-                            python3-man \
-                            %{_mandir}/man1/python3.12.1.gz \
-                  --slave   %{_bindir}/pydoc3 \
-                            pydoc3 \
-                            %{_bindir}/pydoc3.12 \
-                  --slave   %{_bindir}/pydoc-3 \
-                            pydoc-3 \
-                            %{_bindir}/pydoc3.12
-fi
-
-%postun
-# Do this only during uninstall process (not during update)
-if [ $1 -eq 0 ]; then
-     alternatives --keep-foreign --remove python \
-                         %{_bindir}/python3.12
-
-     alternatives --keep-foreign --remove python3 \
-                         %{_bindir}/python3.12
-
-     # Remove link python → python3 if no other python3.* exists
-     if ! alternatives --display python3 > /dev/null; then
-         alternatives --keep-foreign --remove python \
-                             %{_bindir}/python3
-     fi
-fi
-
-
-%post devel
-alternatives --add-slave python3 %{_bindir}/python3.12 \
-     %{_bindir}/python3-config \
-     python3-config \
-     %{_bindir}/python3.12-config
-
-%postun devel
-# Do this only during uninstall process (not during update)
-if [ $1 -eq 0 ]; then
-     alternatives --keep-foreign --remove-slave python3 %{_bindir}/python3.12 \
-         python3-config
-fi
-
-%post idle
-alternatives --add-slave python3 %{_bindir}/python3.12 \
-     %{_bindir}/idle3 \
-     idle3 \
-     %{_bindir}/idle3.12
-
-%postun idle
-# Do this only during uninstall process (not during update)
-if [ $1 -eq 0 ]; then
-     alternatives --keep-foreign --remove-slave python3 %{_bindir}/python3.12 \
-        idle3
-fi
-
-# ======================================================
-# Files for each RPM (sub)package
-# ======================================================
-
-%files -n %{pkgname}-rpm-macros
-%{rpmmacrodir}/macros.python%{pybasever}
-%{_rpmconfigdir}/redhat/import_all_modules_py3_12.py
-%{_rpmconfigdir}/redhat/pathfix_py3_12.py
-
 
 %files -n %{pkgname}
 %doc README.rst
-
-# Alternatives
-%ghost %{_bindir}/unversioned-python
-%ghost %{_mandir}/man1/python.1.gz
-%ghost %{_bindir}/python3
-%ghost %{_mandir}/man1/python3.1.gz
-%ghost %{_bindir}/pydoc3
-%ghost %{_bindir}/pydoc-3
 
 %if %{with main_python}
 %{_bindir}/pydoc*
@@ -1676,9 +1501,6 @@ fi
 %{_bindir}/python%{pybasever}-config
 %{_bindir}/python%{LDVERSION_optimized}-config
 %{_bindir}/python%{LDVERSION_optimized}-*-config
-# Alternatives
-%ghost %{_bindir}/python3-config
-
 %{_libdir}/libpython%{LDVERSION_optimized}.so
 %{_libdir}/pkgconfig/python-%{LDVERSION_optimized}.pc
 %{_libdir}/pkgconfig/python-%{LDVERSION_optimized}-embed.pc
@@ -1691,8 +1513,6 @@ fi
 %{_bindir}/idle*
 %else
 %{_bindir}/idle%{pybasever}
-# Alternatives
-%ghost %{_bindir}/idle3
 %endif
 
 %{pylibdir}/idlelib
@@ -1932,4 +1752,3 @@ fi
       Ville Skyttä <ville.skytta@iki.fi>
       Yaakov Selkowitz <yselkowi@redhat.com>
       Zbigniew Jędrzejewski-Szmek <zbyszek@in.waw.pl>
-
