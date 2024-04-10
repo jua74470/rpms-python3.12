@@ -16,11 +16,11 @@ URL: https://www.python.org/
 
 #  WARNING  When rebasing to a new Python version,
 #           remember to update the python3-docs package as well
-%global general_version %{pybasever}.2
+%global general_version %{pybasever}.3
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 3%{?dist}
+Release: 1%{?dist}
 License: Python-2.0.1
 
 
@@ -386,22 +386,21 @@ Patch397: 00397-tarfile-filter.patch
 # Thomas Dwyer.
 Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-parseaddr-111116.patch
 
-# 00418 # 153905265371131e1227ace0dfef34a5c5efde59
-# Don't generate sbom in make regen-all
-#
-# The script and make target, added in Python 3.12.2, assumes a fixed
-# location of pip wheel and other bundled libraries, resulting in an
-# error and failed build when not found.
-# Reported upstream: https://github.com/python/cpython/issues/114240
-# and https://github.com/python/cpython/issues/114244
-Patch418: 00418-don-t-generate-sbom-in-make-regen-all.patch
-
 # 00422 # a353cebef737c41420dc7ae2469dd657371b8881
-# gh-115133: Fix tests for XMLPullParser with Expat 2.6.0
+# Fix tests for XMLPullParser with Expat 2.6.0
 #
 # Feeding the parser by too small chunks defers parsing to prevent
 # CVE-2023-52425. Future versions of Expat may be more reactive.
-Patch422: 00422-gh-115133-fix-tests-for-xmlpullparser-with-expat-2-6-0.patch
+Patch422: 00422-fix-tests-for-xmlpullparser-with-expat-2-6-0.patch
+
+# 00425 # a563ac3076a00f0f48b3f94ff63d91d37cb4f1e9
+# Only check for 'test/wheeldata' when it's actually used
+#
+# We build Python in Fedora 39+ with option `--with-wheel-pkg-dir`
+# pointing to a custom wheel directory and delete the contents of
+# upstream's `test/wheeldata`. Don't include the directory in the test set
+# if the wheels are used from a different location.
+Patch425: 00425-only-check-for-test-wheeldata-when-it-s-actually-used.patch
 
 # (New patches go here ^^^)
 #
@@ -1714,6 +1713,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Fri May 03 2024 Lumír Balhar <lbalhar@redhat.com> - 3.12.3-1
+- Update to 3.12.3
+Related: RHEL-33690
+
 * Fri May 03 2024 Lumír Balhar <lbalhar@redhat.com> - 3.12.2-3
 - Move all test modules to the python3-test package, namely:
    - __phello__
