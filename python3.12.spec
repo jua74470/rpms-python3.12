@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 3%{?dist}
+Release: 4%{?dist}
 License: Python-2.0.1
 
 
@@ -268,7 +268,6 @@ BuildRequires: libappstream-glib
 BuildRequires: libb2-devel
 %endif
 BuildRequires: libffi-devel
-BuildRequires: libnsl2-devel
 BuildRequires: libtirpc-devel
 BuildRequires: libGL-devel
 BuildRequires: libuuid-devel
@@ -1383,7 +1382,6 @@ CheckPython optimized
 %{dynload_dir}/grp.%{SOABI_optimized}.so
 %{dynload_dir}/math.%{SOABI_optimized}.so
 %{dynload_dir}/mmap.%{SOABI_optimized}.so
-%{dynload_dir}/nis.%{SOABI_optimized}.so
 %{dynload_dir}/ossaudiodev.%{SOABI_optimized}.so
 %{dynload_dir}/_posixshmem.%{SOABI_optimized}.so
 %{dynload_dir}/pyexpat.%{SOABI_optimized}.so
@@ -1681,7 +1679,6 @@ CheckPython optimized
 %{dynload_dir}/grp.%{SOABI_debug}.so
 %{dynload_dir}/math.%{SOABI_debug}.so
 %{dynload_dir}/mmap.%{SOABI_debug}.so
-%{dynload_dir}/nis.%{SOABI_debug}.so
 %{dynload_dir}/ossaudiodev.%{SOABI_debug}.so
 %{dynload_dir}/_posixshmem.%{SOABI_debug}.so
 %{dynload_dir}/pyexpat.%{SOABI_debug}.so
@@ -1768,6 +1765,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Tue Apr 23 2024 Miro Hrončok <mhroncok@redhat.com> - 3.12.2-4
+- Remove the nis module, drop the dependency on libnsl2
+
 * Thu Mar 21 2024 Miro Hrončok <mhroncok@redhat.com> - 3.12.2-3
 - Fix tests for XMLPullParser with Expat 2.6.0
 - Move all test modules to the python3-test package, namely:
