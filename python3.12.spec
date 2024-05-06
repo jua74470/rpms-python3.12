@@ -20,7 +20,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -199,6 +199,15 @@ Provides: bundled(python3dist(packaging)) = 23
 %global py_SOVERSION 1.0
 %global py_INSTSONAME_optimized libpython%{LDVERSION_optimized}.so.%{py_SOVERSION}
 %global py_INSTSONAME_debug     libpython%{LDVERSION_debug}.so.%{py_SOVERSION}
+
+# The -O flag for the compiler, optimized builds
+# https://fedoraproject.org/wiki/Changes/Python_built_with_gcc_O3
+%global optflags_optimized -O3
+# The -O flag for the compiler, debug builds
+# -Wno-cpp avoids some warnings with -O0
+%global optflags_debug -O0 -Wno-cpp
+# Remove the default -O2 flag, our flags are applied in %%build/%%install
+%global __global_compiler_flags %(echo '%{__global_compiler_flags}' | sed 's/-O[[:digit:]]//')
 
 # Disable automatic bytecompilation. The python3 binary is not yet be
 # available in /usr/bin when Python is built. Also, the bytecompilation fails
@@ -905,12 +914,12 @@ BuildPython() {
 # See also: https://bugzilla.redhat.com/show_bug.cgi?id=1818857
 BuildPython debug \
   "--without-ensurepip --with-pydebug" \
-  "-O0 -Wno-cpp"
+  "%{optflags_debug}"
 %endif # with debug_build
 
 BuildPython optimized \
   "--without-ensurepip %{optimizations_flag}" \
-  ""
+  "%{optflags_optimized}"
 
 # ======================================================
 # Installing the built code:
@@ -1015,14 +1024,14 @@ EOF
 %if %{with debug_build}
 InstallPython debug \
   %{py_INSTSONAME_debug} \
-  -O0 \
+  "%{optflags_debug}" \
   %{LDVERSION_debug}
 %endif # with debug_build
 
 # Now the optimized build:
 InstallPython optimized \
   %{py_INSTSONAME_optimized} \
-  "" \
+  "%{optflags_optimized}" \
   %{LDVERSION_optimized}
 
 # Install directories for additional packages
@@ -1884,6 +1893,10 @@ fi
 # ======================================================
 
 %changelog
+* Wed Jul 17 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.4-2
+- Build Python with -O3
+- https://fedoraproject.org/wiki/Changes/Python_built_with_gcc_O3
+
 * Fri Jun 28 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.4-1
 - Update to 3.12.4
 Resolves: RHEL-44074
