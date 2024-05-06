@@ -34,6 +34,9 @@
     - debugtest:
         dir: python/selftest
         run: "VERSION={{ pybasever }} PYTHON=python{{ pybasever }}d X='-i test_check_probes' ./parallel.sh"
+    - optimizedflags:
+        dir: python/flags
+        run: "python{{ pybasever }} ./assertflags.py -O3"
     - debugflags:
         dir: python/flags
         run: "python{{ pybasever }}d ./assertflags.py -O0"
