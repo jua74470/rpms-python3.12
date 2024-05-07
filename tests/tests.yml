@@ -21,10 +21,7 @@
         run: rpm -qa
     - smoke:
         dir: python/smoke
-        run: "VERSION={{ pybasever }} ./venv.sh"
-    - smoke_virtualenv:
-        dir: python/smoke
-        run: "VERSION={{ pybasever }} METHOD=virtualenv ./venv.sh"
+        run: "VERSION={{ pybasever }} TOX=false ./venv.sh"
     - debugsmoke:
         dir: python/smoke
         run: "PYTHON=python{{ pybasever }}d TOX=false VERSION={{ pybasever }} ./venv.sh"
@@ -49,8 +46,6 @@
     - "python{{ pybasever }}-devel"  # for extension building in venv and selftest
     - "python{{ pybasever }}-tkinter"  # for selftest
     - "python{{ pybasever }}-test"  # for selftest
-    - tox  # for venv tests
-    - virtualenv  # for virtualenv tests
     - glibc-all-langpacks # for locale tests
     - marshalparser  # for testing compatibility (magic numbers) with marshalparser
     - rpm  # for debugging
