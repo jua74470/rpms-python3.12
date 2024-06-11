@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 6%{?dist}
+Release: 7%{?dist}
 License: Python-2.0.1
 
 
@@ -1779,6 +1779,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Tue Jun 11 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.2-7
+- Enable importing of hash-based .pyc files under FIPS mode
+Resolves: RHEL-40769
+
 * Tue May 28 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.2-6
 - Support OpenSSL FIPS mode
 - Disable the builtin hashlib hashes except blake2
