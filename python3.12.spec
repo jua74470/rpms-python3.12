@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 7%{?dist}
+Release: 8%{?dist}
 License: Python-2.0.1
 
 
@@ -1779,6 +1779,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Mon Jun 24 2024 Troy Dawson <tdawson@redhat.com> - 3.12.2-8
+- Bump release for June 2024 mass rebuild
+
 * Tue Jun 11 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.2-7
 - Enable importing of hash-based .pyc files under FIPS mode
 Resolves: RHEL-40769
