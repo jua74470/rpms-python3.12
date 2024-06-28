@@ -13,7 +13,7 @@ URL: https://www.python.org/
 
 #  WARNING  When rebasing to a new Python version,
 #           remember to update the python3-docs package as well
-%global general_version %{pybasever}.3
+%global general_version %{pybasever}.4
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
@@ -404,15 +404,6 @@ Patch397: 00397-tarfile-filter.patch
 # parameter to getaddresses() and parseaddr() functions. Patch by
 # Thomas Dwyer.
 Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-parseaddr-111116.patch
-
-# 00425 # a563ac3076a00f0f48b3f94ff63d91d37cb4f1e9
-# Only check for 'test/wheeldata' when it's actually used
-#
-# We build Python in Fedora 39+ with option `--with-wheel-pkg-dir`
-# pointing to a custom wheel directory and delete the contents of
-# upstream's `test/wheeldata`. Don't include the directory in the test set
-# if the wheels are used from a different location.
-Patch425: 00425-only-check-for-test-wheeldata-when-it-s-actually-used.patch
 
 # (New patches go here ^^^)
 #
@@ -1771,6 +1762,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Wed Jul 03 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.4-1
+- Update to 3.12.4
+Resolves: RHEL-44054
+
 * Wed Jul 03 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.3-1
 - Update to 3.12.3
 
