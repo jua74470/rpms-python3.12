@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -251,7 +251,8 @@ BuildRequires: bluez-libs-devel
 BuildRequires: bzip2
 BuildRequires: bzip2-devel
 BuildRequires: desktop-file-utils
-BuildRequires: expat-devel
+# See the runtime requirement in the -libs subpackage
+BuildRequires: expat-devel >= 2.6
 
 BuildRequires: findutils
 BuildRequires: gcc-c++
@@ -561,6 +562,14 @@ Recommends: (%{pkgname}-tkinter%{?_isa} = %{version}-%{release} if tk%{?_isa})
 
 # The zoneinfo module needs tzdata
 Requires: tzdata
+
+# The requirement on libexpat is generated, but we need to version it.
+# When built with expat >= 2.6, but installed with older expat, we get:
+#   ImportError: /usr/lib64/python3.X/lib-dynload/pyexpat.cpython-....so:
+#   undefined symbol: XML_SetReparseDeferralEnabled
+# This breaks many things, including python -m venv.
+# Other subpackages (like -debug) also need this, but they all depend on -libs.
+Requires: expat >= 2.6
 
 %description -n %{pkgname}-libs
 This package contains runtime libraries for use by Python:
@@ -1762,6 +1771,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Thu Jul 04 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.4-2
+- Require expat >= 2.6 to prevent errors when creating venvs with older expat
+
 * Wed Jul 03 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.4-1
 - Update to 3.12.4
 Resolves: RHEL-44054
