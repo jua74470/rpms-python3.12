@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: Python-2.0.1
 
 
@@ -364,6 +364,12 @@ Source11: idle3.appdata.xml
 #
 # pypa/distutils integration: https://github.com/pypa/distutils/pull/70
 Patch251: 00251-change-user-install-location.patch
+
+# 00323 #
+# Fix issues uncovered by static analysis scanners
+# Resolved upstream:
+# https://github.com/python/cpython/issues/120155
+Patch323: 00323-static-analysis-fixes.patch
 
 # 00329 #
 # Support OpenSSL FIPS mode
@@ -1771,6 +1777,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Thu Jul 11 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.4-3
+- Fix issues uncovered by static analysis
+Resolves: RHEL-45021
+
 * Thu Jul 04 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.4-2
 - Require expat >= 2.6 to prevent errors when creating venvs with older expat
 
