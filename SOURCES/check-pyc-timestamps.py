@@ -16,7 +16,6 @@ LEVELS = (None, 1, 2)
 # list of globs of test and other files that we expect not to have bytecode
 not_compiled = [
     '/usr/bin/*',
-    '/usr/lib/rpm/redhat/*',
     '*/test/badsyntax_*.py',
     '*/tokenizedata/bad_coding.py',
     '*/tokenizedata/bad_coding2.py',
