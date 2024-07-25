@@ -28,9 +28,12 @@
     - debugtest:
         dir: python/selftest
         run: "VERSION={{ pybasever }} PYTHON=python{{ pybasever }}d X='-i test_check_probes' ./parallel.sh"
-    - optimizedflags:
+    - optimizedflags_self:
         dir: python/flags
-        run: "python{{ pybasever }} ./assertflags.py -O3"
+        run: "python{{ pybasever }} ./assertflags.py -O3 PY_BUILTIN_MODULE_CFLAGS PY_CFLAGS_NODIST PY_CORE_CFLAGS PY_STDMODULE_CFLAGS"
+    - optimizedflags_3rd:
+        dir: python/flags
+        run: "python{{ pybasever }} ./assertflags.py -O2 CFLAGS PY_CFLAGS"
     - debugflags:
         dir: python/flags
         run: "python{{ pybasever }}d ./assertflags.py -O0"
