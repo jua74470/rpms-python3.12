@@ -20,7 +20,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: Python-2.0.1
 
 
@@ -207,8 +207,6 @@ Provides: bundled(python3dist(packaging)) = 23
 # The -O flag for the compiler, debug builds
 # -Wno-cpp avoids some warnings with -O0
 %global optflags_debug -O0 -Wno-cpp
-# Remove the default -O2 flag, our flags are applied in %%build/%%install
-%global __global_compiler_flags %(echo '%{__global_compiler_flags}' | sed 's/-O[[:digit:]]//')
 
 # Disable automatic bytecompilation. The python3 binary is not yet be
 # available in /usr/bin when Python is built. Also, the bytecompilation fails
@@ -812,6 +810,7 @@ BuildPython() {
   ConfName=$1
   ExtraConfigArgs=$2
   MoreCFlags=$3
+  MoreCFlagsNodist=$4
 
   # Each build is done in its own directory
   ConfDir=build/$ConfName
@@ -851,7 +850,7 @@ BuildPython() {
   $ExtraConfigArgs \
   %{nil}
 
-%global flags_override EXTRA_CFLAGS="$MoreCFlags" CFLAGS_NODIST="$CFLAGS_NODIST $MoreCFlags"
+%global flags_override EXTRA_CFLAGS="$MoreCFlags" CFLAGS_NODIST="$CFLAGS_NODIST $MoreCFlags $MoreCFlagsNodist"
 
 %if %{without bootstrap}
   # Regenerate generated files (needs python3)
@@ -874,11 +873,13 @@ BuildPython() {
 # See also: https://bugzilla.redhat.com/show_bug.cgi?id=1818857
 BuildPython debug \
   "--without-ensurepip --with-pydebug" \
-  "%{optflags_debug}"
+  "%{optflags_debug}" \
+  ""
 %endif # with debug_build
 
 BuildPython optimized \
   "--without-ensurepip %{optimizations_flag}" \
+  "" \
   "%{optflags_optimized}"
 
 # ======================================================
@@ -991,7 +992,7 @@ InstallPython debug \
 # Now the optimized build:
 InstallPython optimized \
   %{py_INSTSONAME_optimized} \
-  "%{optflags_optimized}" \
+  "" \
   %{LDVERSION_optimized}
 
 # Install directories for additional packages
@@ -1713,6 +1714,9 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Thu Jul 25 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.4-3
+- Properly propagate the optimization flags to C extensions
+
 * Wed Jul 17 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.4-2
 - Build Python with -O3
 - https://fedoraproject.org/wiki/Changes/Python_built_with_gcc_O3
