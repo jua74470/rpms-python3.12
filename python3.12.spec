@@ -13,11 +13,11 @@ URL: https://www.python.org/
 
 #  WARNING  When rebasing to a new Python version,
 #           remember to update the python3-docs package as well
-%global general_version %{pybasever}.4
+%global general_version %{pybasever}.5
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 4%{?dist}
+Release: 1%{?dist}
 License: Python-2.0.1
 
 
@@ -71,37 +71,31 @@ License: Python-2.0.1
 # If the rpmwheels condition is disabled, we use the bundled wheel packages
 # from Python with the versions below.
 # This needs to be manually updated when we update Python.
-%global pip_version 24.0
+%global pip_version 24.2
 %global setuptools_version 67.6.1
 %global wheel_version 0.40.0
 # All of those also include a list of indirect bundled libs:
 # pip
 #  $ %%{_rpmconfigdir}/pythonbundles.py <(unzip -p Lib/ensurepip/_bundled/pip-*.whl pip/_vendor/vendor.txt)
 %global pip_bundled_provides %{expand:
-Provides: bundled(python3dist(cachecontrol)) = 0.13.1
-Provides: bundled(python3dist(certifi)) = 2023.7.22
-Provides: bundled(python3dist(chardet)) = 5.1
-Provides: bundled(python3dist(colorama)) = 0.4.6
+Provides: bundled(python3dist(cachecontrol)) = 0.14
+Provides: bundled(python3dist(certifi)) = 2024.7.4
 Provides: bundled(python3dist(distlib)) = 0.3.8
-Provides: bundled(python3dist(distro)) = 1.8
-Provides: bundled(python3dist(idna)) = 3.4
-Provides: bundled(python3dist(msgpack)) = 1.0.5
-Provides: bundled(python3dist(packaging)) = 21.3
-Provides: bundled(python3dist(platformdirs)) = 3.8.1
-Provides: bundled(python3dist(pygments)) = 2.15.1
-Provides: bundled(python3dist(pyparsing)) = 3.1
+Provides: bundled(python3dist(distro)) = 1.9
+Provides: bundled(python3dist(idna)) = 3.7
+Provides: bundled(python3dist(msgpack)) = 1.0.8
+Provides: bundled(python3dist(packaging)) = 24.1
+Provides: bundled(python3dist(platformdirs)) = 4.2.2
+Provides: bundled(python3dist(pygments)) = 2.18
 Provides: bundled(python3dist(pyproject-hooks)) = 1
-Provides: bundled(python3dist(requests)) = 2.31
+Provides: bundled(python3dist(requests)) = 2.32.3
 Provides: bundled(python3dist(resolvelib)) = 1.0.1
-Provides: bundled(python3dist(rich)) = 13.4.2
-Provides: bundled(python3dist(setuptools)) = 68
-Provides: bundled(python3dist(six)) = 1.16
-Provides: bundled(python3dist(tenacity)) = 8.2.2
+Provides: bundled(python3dist(rich)) = 13.7.1
+Provides: bundled(python3dist(setuptools)) = 70.3
 Provides: bundled(python3dist(tomli)) = 2.0.1
-Provides: bundled(python3dist(truststore)) = 0.8
-Provides: bundled(python3dist(typing-extensions)) = 4.7.1
-Provides: bundled(python3dist(urllib3)) = 1.26.17
-Provides: bundled(python3dist(webencodings)) = 0.5.1
+Provides: bundled(python3dist(truststore)) = 0.9.1
+Provides: bundled(python3dist(typing-extensions)) = 4.12.2
+Provides: bundled(python3dist(urllib3)) = 1.26.18
 }
 # setuptools
 # vendor.txt files not in .whl
@@ -373,12 +367,6 @@ Source11: idle3.appdata.xml
 #
 # pypa/distutils integration: https://github.com/pypa/distutils/pull/70
 Patch251: 00251-change-user-install-location.patch
-
-# 00323 #
-# Fix issues uncovered by static analysis scanners
-# Resolved upstream:
-# https://github.com/python/cpython/issues/120155
-Patch323: 00323-static-analysis-fixes.patch
 
 # 00329 #
 # Support OpenSSL FIPS mode
@@ -1786,6 +1774,11 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Wed Aug 07 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.5-1
+- Update to 3.12.5
+- Security fix for CVE-2024-6923
+Resolves: RHEL-53036
+
 * Wed Jul 17 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.4-4
 - Build Python with -O3
 - https://fedoraproject.org/wiki/Changes/Python_built_with_gcc_O3
