@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -408,6 +408,10 @@ Patch397: 00397-tarfile-filter.patch
 # parameter to getaddresses() and parseaddr() functions. Patch by
 # Thomas Dwyer.
 Patch415: 00415-cve-2023-27043-gh-102988-reject-malformed-addresses-in-email-parseaddr-111116.patch
+
+# 00436 # c76cc2aa3a2c30375ade4859b732ada851cc89ed
+# [CVE-2024-8088] gh-122905: Sanitize names in zipfile.Path.
+Patch436: 00436-cve-2024-8088-gh-122905-sanitize-names-in-zipfile-path.patch
 
 # (New patches go here ^^^)
 #
@@ -1774,6 +1778,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Fri Aug 23 2024 Charalampos Stratakis <cstratak@redhat.com> - 3.12.5-2
+- Security fix for CVE-2024-8088
+Resolves: RHEL-55923
+
 * Wed Aug 07 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.5-1
 - Update to 3.12.5
 - Security fix for CVE-2024-6923
