@@ -17,7 +17,7 @@ URL: https://www.python.org/
 #global prerel ...
 %global upstream_version %{general_version}%{?prerel}
 Version: %{general_version}%{?prerel:~%{prerel}}
-Release: 1%{?dist}
+Release: 2%{?dist}
 License: Python-2.0.1
 
 
@@ -1765,6 +1765,10 @@ CheckPython optimized
 # ======================================================
 
 %changelog
+* Tue Oct 29 2024 Troy Dawson <tdawson@redhat.com> - 3.12.6-2
+- Bump release for October 2024 mass rebuild:
+  Resolves: RHEL-64018
+
 * Mon Sep 09 2024 Tomáš Hrnčiar <thrnciar@redhat.com> - 3.12.6-1
 - Update to 3.12.6
 Resolves: RHEL-57397
